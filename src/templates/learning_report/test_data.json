@@ -1,0 +1,5 @@
+{
+  "student": { "name": "测试" },
+  "summary_stats": { "completion_rate": 50 },
+  "ai": { "summary": "测试评价" }
+}

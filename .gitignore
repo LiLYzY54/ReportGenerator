@@ -1,0 +1,8 @@
+node_modules
+.DS_Store
+dist
+.env
+*.log
+test_*.html
+test_*.js
+!test_pipeline.js

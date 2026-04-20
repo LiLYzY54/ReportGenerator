@@ -1,0 +1,97 @@
+{
+  "name": "learning_report",
+  "description": "学习报告生成模板 - 将 Excel 数据转换为精美的 HTML 学习报告",
+  "version": "1.0.0",
+
+  "app": {
+    "name": "学习报告生成器",
+    "description": "将 Excel 数据转换为 HTML 学习报告"
+  },
+
+  "template": {
+    "path": "./src/templates/learning_report/template.html",
+    "engine": "handlebars-like"
+  },
+
+  "schema": {
+    "path": "./src/templates/learning_report/schema.json"
+  },
+
+  "compute": {
+    "path": "./src/templates/learning_report/compute.config.json"
+  },
+
+  "ai": {
+    "enabled": false,
+    "provider": "openai",
+    "model": "gpt-3.5-turbo",
+    "temperature": 0.7,
+    "maxTokens": 1000,
+    "prompts": ["summary", "subject", "suggestion"]
+  },
+
+  "report": {
+    "title": "学习报告",
+    "footer": "由 Excel 报告生成工具自动生成",
+    "dateFormat": "YYYY.MM.DD"
+  },
+
+  "stats": {
+    "dateField": "date",
+    "subjectField": "subject",
+    "completedField": "completed",
+    "durationField": "durationMinutes",
+    "statusField": "status"
+  },
+
+  "completion": {
+    "completedValues": ["true", "yes", "✅", "1", "完成", "completed", "done"],
+    "partialValues": ["△", "部分完成", "partial"],
+    "pendingValues": ["", "留空", "pending", "false", "no"]
+  },
+
+  "monthly": {
+    "format": "YYYY.MM",
+    "sortOrder": "asc"
+  },
+
+  "subjects": {
+    "sortBy": "count",
+    "sortOrder": "desc",
+    "topN": 10
+  },
+
+  "evaluation": {
+    "dimensions": [
+      {
+        "key": "completion",
+        "name": "任务完成",
+        "defaultScore": 80,
+        "defaultComment": "任务完成情况良好"
+      },
+      {
+        "key": "consistency",
+        "name": "学习坚持",
+        "defaultScore": 75,
+        "defaultComment": "学习持续性需要加强"
+      },
+      {
+        "key": "balance",
+        "name": "学科平衡",
+        "defaultScore": 70,
+        "defaultComment": "各学科发展较为均衡"
+      },
+      {
+        "key": "progress",
+        "name": "进步幅度",
+        "defaultScore": 78,
+        "defaultComment": "相比上期有明显进步"
+      }
+    ]
+  },
+
+  "output": {
+    "format": "html",
+    "encoding": "utf-8"
+  }
+}

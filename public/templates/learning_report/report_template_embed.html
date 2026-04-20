@@ -1,0 +1,592 @@
+<!--
+  伴学报告模板 - 嵌入版 v3
+  用于 React 页面中 iframe 渲染
+  已移除 html/head/body，使用 lr- 前缀避免样式冲突
+-->
+
+<!-- 样式 -->
+<style>
+.lr-root {
+  --lr-blue: #185FA5;
+  --lr-blue-light: #E6F1FB;
+  --lr-blue-mid: #378ADD;
+  --lr-green: #0F6E56;
+  --lr-green-mid: #1D9E75;
+  --lr-green-light: #E1F5EE;
+  --lr-amber: #BA7517;
+  --lr-amber-mid: #EF9F27;
+  --lr-amber-light: #FAEEDA;
+  --lr-coral: #D85A30;
+  --lr-coral-light: #FAECE7;
+  --lr-gray-100: #F1EFE8;
+  --lr-gray-200: #D3D1C7;
+  --lr-gray-400: #B4B2A9;
+  --lr-gray-500: #888780;
+  --lr-gray-700: #5F5E5A;
+  --lr-gray-900: #2C2C2A;
+  --lr-radius-md: 8px;
+  --lr-radius-lg: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  color: var(--lr-gray-900);
+  background: #fff;
+  line-height: 1.5;
+}
+.lr-root *, .lr-root *::before, .lr-root *::after { box-sizing: border-box; }
+.lr-page { max-width: 800px; margin: 0 auto; background: #fff; padding: 24px; page-break-after: always; }
+.lr-page:last-child { page-break-after: auto; }
+
+/* ── 品牌页眉 ── */
+.lr-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--lr-blue); padding-bottom: 12px; margin-bottom: 16px; }
+.lr-brand { display: flex; align-items: center; gap: 10px; }
+.lr-logo { width: 36px; min-width: 36px; height: 36px; background: var(--lr-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; overflow: hidden; }
+.lr-brand-name { font-size: 15px; font-weight: 700; color: var(--lr-blue); }
+.lr-brand-sub { font-size: 11px; color: var(--lr-gray-500); margin-top: 2px; }
+.lr-header-right { text-align: right; }
+.lr-badge { display: inline-block; font-size: 11px; padding: 3px 12px; border-radius: 20px; background: var(--lr-blue-light); color: var(--lr-blue); font-weight: 600; margin-bottom: 4px; }
+.lr-date { font-size: 11px; color: var(--lr-gray-500); }
+
+/* ── 学生信息条 ── */
+.lr-student-bar { display: flex; align-items: stretch; gap: 14px; background: var(--lr-gray-100); border-radius: var(--lr-radius-lg); padding: 14px 16px; margin-bottom: 16px; }
+.lr-avatar { width: 52px; min-width: 52px; height: 52px; border-radius: 50%; background: var(--lr-blue-light); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: var(--lr-blue); overflow: hidden; }
+.lr-student-info { flex: 1; min-width: 0; }
+.lr-student-name { font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr-student-meta { font-size: 12px; color: var(--lr-gray-500); margin-top: 4px; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.lr-tag { font-size: 11px; padding: 2px 10px; border-radius: 20px; font-weight: 500; white-space: nowrap; }
+.lr-tag-blue { background: var(--lr-blue-light); color: var(--lr-blue); }
+.lr-tag-green { background: var(--lr-green-light); color: var(--lr-green); }
+.lr-tag-amber { background: var(--lr-amber-light); color: var(--lr-amber); }
+.lr-tag-coral { background: var(--lr-coral-light); color: var(--lr-coral); }
+.lr-bar-divider { width: 1px; min-width: 1px; background: var(--lr-gray-200); margin: 4px 0; }
+.lr-kpis { display: flex; gap: 20px; align-items: center; padding-left: 8px; }
+.lr-kpi { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 48px; }
+.lr-kpi-val { font-size: 22px; font-weight: 700; color: var(--lr-blue); line-height: 1; }
+.lr-kpi-label { font-size: 11px; color: var(--lr-gray-500); white-space: nowrap; }
+
+/* ── 区块标题 ── */
+.lr-section-label { font-size: 12px; font-weight: 700; color: var(--lr-gray-500); letter-spacing: .06em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.lr-section-label::before { content: ''; width: 4px; height: 12px; background: var(--lr-blue); border-radius: 2px; display: inline-block; flex-shrink: 0; }
+
+/* ── 卡片网格 ── */
+.lr-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.lr-card-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.lr-card-full { grid-column: 1 / -1; }
+.lr-card { border: 1px solid var(--lr-gray-200); border-radius: var(--lr-radius-lg); padding: 14px; background: #fff; overflow: hidden; }
+.lr-card > * { overflow-wrap: break-word; }
+.lr-mb { margin-bottom: 16px; }
+
+/* ── 画像模块 ── */
+.lr-profile-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.lr-profile-card { border: 1px solid var(--lr-gray-200); border-radius: var(--lr-radius-lg); padding: 14px; overflow: hidden; }
+.lr-profile-icon { font-size: 18px; margin-bottom: 6px; }
+.lr-profile-card h4 { font-size: 13px; font-weight: 700; color: var(--lr-gray-900); margin: 0 0 8px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lr-profile-card p { font-size: 12px; color: var(--lr-gray-700); line-height: 1.7; margin: 0; word-break: break-all; }
+.lr-highlight-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin: 4px 4px 0 0; font-weight: 500; white-space: nowrap; }
+
+/* ── 统计卡片 ── */
+.lr-stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+.lr-stat-card { background: var(--lr-gray-100); border-radius: var(--lr-radius-md); padding: 12px 14px; min-height: 70px; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; }
+.lr-stat-label { font-size: 11px; color: var(--lr-gray-500); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lr-stat-val { font-size: 24px; font-weight: 700; line-height: 1.2; }
+.lr-stat-val-g { color: var(--lr-green); }
+.lr-stat-val-b { color: var(--lr-blue); }
+.lr-stat-val-a { color: var(--lr-amber); }
+.lr-stat-sub { font-size: 11px; color: var(--lr-gray-500); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lr-stat-sub-up { color: var(--lr-green-mid); }
+
+/* ── 进度条 ── */
+.lr-prog-item { margin-bottom: 10px; }
+.lr-prog-item:last-child { margin-bottom: 0; }
+.lr-prog-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; gap: 8px; }
+.lr-prog-pct { font-weight: 700; flex-shrink: 0; }
+.lr-prog-pct-g { color: var(--lr-green); }
+.lr-prog-pct-a { color: var(--lr-amber); }
+.lr-track { height: 8px; min-height: 8px; background: var(--lr-gray-100); border-radius: 4px; overflow: hidden; }
+.lr-fill { height: 100%; min-height: 8px; border-radius: 4px; }
+.lr-fill-g { background: var(--lr-green-mid); }
+.lr-fill-a { background: var(--lr-amber-mid); }
+
+/* ── 数据表 ── */
+.lr-table-wrap { overflow-x: auto; margin-bottom: 16px; }
+.lr-table { width: 100%; min-width: 600px; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+.lr-table colgroup { display: none; }
+.lr-table th { background: var(--lr-gray-100); font-weight: 700; color: var(--lr-gray-700); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--lr-gray-200); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr-table td { padding: 8px 10px; border-bottom: 1px solid var(--lr-gray-200); color: var(--lr-gray-700); vertical-align: top; line-height: 1.6; word-break: break-all; overflow: hidden; }
+.lr-table td.date-cell { white-space: nowrap; word-break: normal; }
+.lr-table td.status-cell { white-space: nowrap; word-break: normal; }
+.lr-table td.subject-cell { line-height: 1.8; }
+.lr-table tr:last-child td { border-bottom: none; }
+.lr-table tr:nth-child(even) td { background: #FAFAF8; }
+.lr-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; flex-shrink: 0; }
+.lr-dot-g { background: var(--lr-green-mid); }
+.lr-dot-y { background: var(--lr-amber-mid); }
+.lr-dot-n { background: var(--lr-gray-400); }
+.lr-phase-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+.lr-phase-1 { background: var(--lr-amber-light); color: var(--lr-amber); }
+.lr-phase-2 { background: var(--lr-blue-light); color: var(--lr-blue); }
+.lr-phase-3 { background: var(--lr-green-light); color: var(--lr-green); }
+.lr-subject-pill { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin: 2px 3px 2px 0; font-weight: 500; white-space: nowrap; }
+.lr-s-yu { background: #EAF3DE; color: #3B6D11; }
+.lr-s-shu { background: var(--lr-blue-light); color: var(--lr-blue); }
+.lr-s-ying { background: var(--lr-coral-light); color: var(--lr-coral); }
+.lr-s-zong { background: #FBEAF0; color: #993556; }
+
+/* ── 评语 ── */
+.lr-eval-box { border: 1px solid var(--lr-gray-200); border-radius: var(--lr-radius-lg); padding: 14px; margin-bottom: 12px; background: #fff; overflow: hidden; }
+.lr-eval-box-highlight { background: #FAFBFD; border-color: #B5D4F4; }
+.lr-eval-text { font-size: 13px; line-height: 1.9; color: var(--lr-gray-700); word-break: break-all; }
+
+/* ── 建议列表 ── */
+.lr-suggest-list { list-style: none; padding: 0; margin: 0; }
+.lr-suggest-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.8; color: var(--lr-gray-700); margin-bottom: 8px; }
+.lr-suggest-list li:last-child { margin-bottom: 0; }
+.lr-suggest-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--lr-blue-light); color: var(--lr-blue); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 3px; }
+.lr-suggest-list li span:last-child { word-break: break-all; }
+
+/* ── 图表容器 ── */
+.lr-chart-container { position: relative; width: 100%; height: 180px; min-height: 180px; margin-bottom: 16px; overflow: hidden; }
+.lr-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.lr-chart-pie-container { position: relative; width: 100%; height: 160px; min-height: 160px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+/* ── 页脚 ── */
+.lr-footer { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--lr-gray-500); border-top: 1px solid var(--lr-gray-200); padding-top: 10px; margin-top: 16px; gap: 8px; }
+.lr-footer-brand { color: var(--lr-blue); font-weight: 600; white-space: nowrap; }
+.lr-footer span:last-child { white-space: nowrap; }
+
+/* ── 分隔 ── */
+.lr-divider { height: 1px; min-height: 1px; background: var(--lr-gray-200); margin: 16px 0; }
+
+/* ── 图例 ── */
+.lr-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+.lr-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--lr-gray-500); white-space: nowrap; }
+.lr-legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── 雷达图特殊处理 ── */
+#radarChart { width: 100% !important; height: 220px !important; }
+</style>
+
+<!-- 内容 -->
+<div class="lr-root">
+
+  <!-- ═══ 第1页：总览 ═══ -->
+  <div class="lr-page">
+    <div class="lr-header">
+      <div class="lr-brand">
+        <div class="lr-logo">{{brand.logo}}</div>
+        <div>
+          <div class="lr-brand-name">{{brand.name}}</div>
+          <div class="lr-brand-sub">{{brand.slogan}}</div>
+        </div>
+      </div>
+      <div class="lr-header-right">
+        <div class="lr-badge">{{report.type}}</div>
+        <div class="lr-date">报告周期：{{report.period}} · 生成日期：{{report.generatedDate}}</div>
+      </div>
+    </div>
+
+    <div class="lr-student-bar">
+      <div class="lr-avatar">{{student.nameShort}}</div>
+      <div class="lr-student-info">
+        <div class="lr-student-name">{{student.name}}</div>
+        <div class="lr-student-meta">{{student.grade}}（{{student.gradeShort}}）· {{student.gender}} · {{student.location}} | 教材：{{student.textbooks}}</div>
+        <div class="lr-tags">
+          {{#each student.tags}}
+          <span class="lr-tag lr-tag-{{this.color}}">{{this.text}}</span>
+          {{/each}}
+        </div>
+      </div>
+      <div class="lr-bar-divider"></div>
+      <div class="lr-kpis">
+        <div class="lr-kpi">
+          <div class="lr-kpi-val">{{kpis.days}}</div>
+          <div class="lr-kpi-label">伴学天数</div>
+        </div>
+        <div class="lr-kpi">
+          <div class="lr-kpi-val">{{kpis.recordedCount}}</div>
+          <div class="lr-kpi-label">有记录次数</div>
+        </div>
+        <div class="lr-kpi">
+          <div class="lr-kpi-val">{{kpis.phases}}</div>
+          <div class="lr-kpi-label">学习阶段</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lr-stat-row">
+      <div class="lr-stat-card">
+        <div class="lr-stat-label">{{stats.completionRate.label}}</div>
+        <div class="lr-stat-val lr-stat-val-g">{{stats.completionRate.value}}%</div>
+        <div class="lr-stat-sub lr-stat-sub-up">{{stats.completionRate.trend}}</div>
+      </div>
+      <div class="lr-stat-card">
+        <div class="lr-stat-label">{{stats.readingRate.label}}</div>
+        <div class="lr-stat-val lr-stat-val-b">{{stats.readingRate.value}}%</div>
+        <div class="lr-stat-sub">{{stats.readingRate.desc}}</div>
+      </div>
+      <div class="lr-stat-card">
+        <div class="lr-stat-label">{{stats.mathCoverage.label}}</div>
+        <div class="lr-stat-val lr-stat-val-b">{{stats.mathCoverage.value}}</div>
+        <div class="lr-stat-sub">{{stats.mathCoverage.desc}}</div>
+      </div>
+      <div class="lr-stat-card">
+        <div class="lr-stat-label">{{stats.winterIntensity.label}}</div>
+        <div class="lr-stat-val lr-stat-val-a">{{stats.winterIntensity.value}}</div>
+        <div class="lr-stat-sub">{{stats.winterIntensity.desc}}</div>
+      </div>
+    </div>
+
+    <div class="lr-profile-row">
+      <div class="lr-profile-card">
+        <div class="lr-profile-icon">{{profiles.personal.icon}}</div>
+        <h4>{{profiles.personal.title}}</h4>
+        <p>{{profiles.personal.description}}</p>
+        <div class="lr-tags">
+          {{#each profiles.personal.tags}}
+          <span class="lr-tag lr-tag-{{this.color}}">{{this.text}}</span>
+          {{/each}}
+        </div>
+      </div>
+      <div class="lr-profile-card">
+        <div class="lr-profile-icon">{{profiles.learning.icon}}</div>
+        <h4>{{profiles.learning.title}}</h4>
+        <p>{{profiles.learning.description}}</p>
+        <div class="lr-tags">
+          {{#each profiles.learning.tags}}
+          <span class="lr-highlight-tag" style="background:{{this.bgColor}};color:{{this.textColor}};">{{this.text}}</span>
+          {{/each}}
+        </div>
+      </div>
+      <div class="lr-profile-card">
+        <div class="lr-profile-icon">📈</div>
+        <h4>综合评价</h4>
+        <p>{{ai.summary}}</p>
+      </div>
+    </div>
+
+    <div class="lr-section-label">学习阶段概览</div>
+    <div class="lr-card-grid lr-card-grid-3 lr-mb">
+      {{#each phases}}
+      <div class="lr-card">
+        <span class="lr-phase-badge lr-phase-{{this.num}}">{{this.name}}</span>
+        <div style="font-size:11px;color:var(--lr-gray-500);margin-top:5px;">{{this.subtitle}}</div>
+        <div style="font-size:12px;color:var(--lr-gray-700);margin-top:7px;">{{this.dateRange}}</div>
+        <div style="font-size:11px;color:var(--lr-gray-500);margin-top:4px;">{{this.feature}}</div>
+        <div style="margin-top:10px;">
+          {{#each this.subjects.yu}}<span class="lr-subject-pill lr-s-yu">{{this}}</span>{{/each}}
+          {{#each this.subjects.shu}}<span class="lr-subject-pill lr-s-shu">{{this}}</span>{{/each}}
+          {{#each this.subjects.ying}}<span class="lr-subject-pill lr-s-ying">{{this}}</span>{{/each}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+
+    <div class="lr-footer">
+      <span class="lr-footer-brand">{{brand.name}}</span>
+      <span>{{footer.dataSource}}</span>
+      <span>{{footer.pageInfo}}</span>
+    </div>
+  </div>
+
+  <!-- ═══ 第2页：数据明细 ═══ -->
+  <div class="lr-page">
+    <div class="lr-header">
+      <div class="lr-brand">
+        <div class="lr-logo">{{brand.logo}}</div>
+        <div>
+          <div class="lr-brand-name">{{brand.name}}</div>
+          <div class="lr-brand-sub">{{brand.slogan}}</div>
+        </div>
+      </div>
+      <div class="lr-header-right">
+        <div class="lr-badge">{{report.type}}</div>
+        <div class="lr-date">{{student.name}} · 数据明细与图表</div>
+      </div>
+    </div>
+
+    <div class="lr-section-label">{{charts.monthlyChart.title}}</div>
+    <div class="lr-chart-container">
+      <canvas id="monthChart"></canvas>
+    </div>
+
+    <div class="lr-chart-row">
+      <div>
+        <div class="lr-section-label">{{charts.subjectChart.title}}</div>
+        <div class="lr-chart-pie-container">
+          <canvas id="subjectChart"></canvas>
+        </div>
+        <div id="subjectLegend" class="lr-legend"></div>
+      </div>
+      <div>
+        <div class="lr-section-label">{{charts.durationChart.title}}</div>
+        <div class="lr-chart-container" style="height:160px;min-height:160px;">
+          <canvas id="durationChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="lr-section-label">{{charts.subjectProgress.title}}</div>
+    <div class="lr-card lr-mb">
+      {{#each charts.subjectProgress.items}}
+      <div class="lr-prog-item">
+        <div class="lr-prog-head">
+          <span>{{this.name}}</span>
+          <span class="lr-prog-pct lr-prog-pct-{{this.colorClass}}">{{this.value}}%</span>
+        </div>
+        <div class="lr-track"><div class="lr-fill lr-fill-{{this.colorClass}}" style="width:{{this.value}}%"></div></div>
+      </div>
+      {{/each}}
+    </div>
+
+    <div class="lr-section-label">{{records.title}}</div>
+    <div class="lr-table-wrap">
+      <table class="lr-table">
+        <colgroup>
+          <col style="width:60px;">
+          <col style="width:50px;">
+          <col style="width:80px;">
+          <col style="width:110px;">
+          <col style="width:110px;">
+          <col style="width:110px;">
+          <col style="width:70px;">
+          <col style="width:70px;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>阶段</th>
+            <th>时间段</th>
+            <th>语文</th>
+            <th>数学</th>
+            <th>英语</th>
+            <th>综合</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each records.items}}
+          <tr>
+            <td class="date-cell">{{this.date}}</td>
+            <td><span class="lr-phase-badge lr-phase-{{this.phaseNum}}">{{this.phaseShort}}</span></td>
+            <td class="date-cell">{{this.timeRange}}</td>
+            <td class="subject-cell">{{#each this.subjects.yu}}<span class="lr-subject-pill lr-s-yu">{{this}}</span>{{/each}}</td>
+            <td class="subject-cell">{{#each this.subjects.shu}}<span class="lr-subject-pill lr-s-shu">{{this}}</span>{{/each}}</td>
+            <td class="subject-cell">{{#each this.subjects.ying}}<span class="lr-subject-pill lr-s-ying">{{this}}</span>{{/each}}</td>
+            <td class="subject-cell">{{#each this.subjects.zong}}<span class="lr-subject-pill lr-s-zong">{{this}}</span>{{/each}}</td>
+            <td class="status-cell"><span class="lr-status-dot lr-dot-{{this.statusDot}}"></span>{{this.statusText}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="lr-footer">
+      <span class="lr-footer-brand">{{brand.name}}</span>
+      <span>{{footer.completionNote}}</span>
+      <span>{{footer.pageInfo2}}</span>
+    </div>
+  </div>
+
+  <!-- ═══ 第3页：综合评价 ═══ -->
+  <div class="lr-page">
+    <div class="lr-header">
+      <div class="lr-brand">
+        <div class="lr-logo">{{brand.logo}}</div>
+        <div>
+          <div class="lr-brand-name">{{brand.name}}</div>
+          <div class="lr-brand-sub">{{brand.slogan}}</div>
+        </div>
+      </div>
+      <div class="lr-header-right">
+        <div class="lr-badge">{{report.type}}</div>
+        <div class="lr-date">{{student.name}} · 综合评价与建议</div>
+      </div>
+    </div>
+
+    <div class="lr-section-label">{{charts.radarChart.title}}</div>
+    <div class="lr-chart-container" style="height:240px;min-height:240px;">
+      <canvas id="radarChart"></canvas>
+    </div>
+    <div style="font-size:11px;color:var(--lr-gray-500);margin-bottom:16px;">{{charts.radarChart.note}}</div>
+
+    <div class="lr-section-label">{{charts.radarChart.dimensionTitle}}</div>
+    <div class="lr-card-grid lr-card-grid-3 lr-mb">
+      {{#each charts.radarChart.dimensions}}
+      <div class="lr-card" style="padding:10px 12px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;gap:8px;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{this.name}}</span>
+          <span class="lr-prog-pct lr-prog-pct-{{this.colorClass}}" style="flex-shrink:0;">{{this.score}} / 5</span>
+        </div>
+        <div class="lr-track"><div class="lr-fill lr-fill-{{this.colorClass}}" style="width:{{this.percent}}%"></div></div>
+      </div>
+      {{/each}}
+    </div>
+
+    <div class="lr-section-label">{{evaluation.summary.title}}</div>
+    <div class="lr-eval-box lr-eval-box-highlight">
+      <div class="lr-eval-text">{{evaluation.summary.content}}</div>
+    </div>
+
+    <div class="lr-card-grid">
+      <div class="lr-card">
+        <div style="font-size:12px;font-weight:700;color:var(--lr-gray-900);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{evaluation.subject.yu.title}}</div>
+        <div style="font-size:12px;color:var(--lr-gray-700);line-height:1.7;word-break:break-all;">{{evaluation.subject.yu.content}}</div>
+      </div>
+      <div class="lr-card">
+        <div style="font-size:12px;font-weight:700;color:var(--lr-gray-900);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{evaluation.subject.shu.title}}</div>
+        <div style="font-size:12px;color:var(--lr-gray-700);line-height:1.7;word-break:break-all;">{{evaluation.subject.shu.content}}</div>
+      </div>
+      <div class="lr-card">
+        <div style="font-size:12px;font-weight:700;color:var(--lr-gray-900);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{evaluation.subject.ying.title}}</div>
+        <div style="font-size:12px;color:var(--lr-gray-700);line-height:1.7;word-break:break-all;">{{evaluation.subject.ying.content}}</div>
+      </div>
+    </div>
+
+    <div class="lr-section-label">{{evaluation.suggestions.title}}</div>
+    <div class="lr-card">
+      <ul class="lr-suggest-list">
+        {{#each evaluation.suggestions.items}}
+        <li>
+          <span class="lr-suggest-num">{{this.num}}</span>
+          <span>{{{this.content}}}</span>
+        </li>
+        {{/each}}
+      </ul>
+    </div>
+
+    <div class="lr-footer">
+      <span class="lr-footer-brand">{{brand.name}}</span>
+      <span>{{footer.reportNote}}</span>
+      <span>{{footer.pageInfo3}}</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function() {
+  var BLUE = '{{charts.theme.blue}}';
+  var BLUE_D = '{{charts.theme.blueDark}}';
+  var GREEN = '{{charts.theme.green}}';
+  var AMBER = '{{charts.theme.amber}}';
+  var CORAL = '{{charts.theme.coral}}';
+  var GRAY = '{{charts.theme.gray}}';
+  var GRAY_L = '{{charts.theme.grayLight}}';
+
+  function waitForChart(id, callback) {
+    var el = document.getElementById(id);
+    if (el && el.chart) {
+      callback(el.chart);
+    } else {
+      setTimeout(function() { waitForChart(id, callback); }, 50);
+    }
+  }
+
+  // 月度柱状图
+  var monthCtx = document.getElementById('monthChart');
+  if (monthCtx) {
+    monthCtx.chart = new Chart(monthCtx, {
+      type: 'bar',
+      data: {
+        labels: JSON.parse('{{{charts.monthlyChart.labels}}}'),
+        datasets: [{ label: '{{{charts.monthlyChart.datasetLabel}}}', data: JSON.parse('{{{charts.monthlyChart.data}}}'), backgroundColor: JSON.parse('{{{charts.monthlyChart.colors}}}'), borderRadius: 5 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 800 },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: GRAY_L }, ticks: { color: '#888780', font: { size: 11 } } },
+          y: { min: 0, max: {{{charts.monthlyChart.max}}}, grid: { color: GRAY_L }, ticks: { color: '#888780', font: { size: 11 }, stepSize: 5 } }
+        }
+      }
+    });
+  }
+
+  // 学科饼图
+  var subjectData = { labels: JSON.parse('{{{charts.subjectChart.labels}}}'), data: JSON.parse('{{{charts.subjectChart.data}}}'), colors: JSON.parse('{{{charts.subjectChart.colors}}}') };
+  var subjectCanvas = document.getElementById('subjectChart');
+  if (subjectCanvas) {
+    subjectCanvas.width = 148;
+    subjectCanvas.height = 148;
+    subjectCanvas.chart = new Chart(subjectCanvas, {
+      type: 'doughnut',
+      data: { labels: subjectData.labels, datasets: [{ data: subjectData.data, backgroundColor: subjectData.colors, borderWidth: 2, borderColor: '#fff' }] },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        layout: { padding: 4 },
+        animation: { duration: 800 },
+        plugins: { legend: { display: false } }
+      }
+    });
+    var legendEl = document.getElementById('subjectLegend');
+    if (legendEl) {
+      subjectData.labels.forEach(function(l, i) {
+        legendEl.innerHTML += '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;"><span style="width:10px;height:10px;border-radius:2px;background:' + subjectData.colors[i] + ';display:inline-block;"></span><span style="font-size:11px;color:#5F5E5A;">' + l + ' ' + subjectData.data[i] + '%</span></div>';
+      });
+    }
+  }
+
+  // 时长分布图
+  var durationCtx = document.getElementById('durationChart');
+  if (durationCtx) {
+    durationCtx.chart = new Chart(durationCtx, {
+      type: 'bar',
+      data: { labels: JSON.parse('{{{charts.durationChart.labels}}}'), datasets: [{ label: '{{{charts.durationChart.datasetLabel}}}', data: JSON.parse('{{{charts.durationChart.data}}}'), backgroundColor: JSON.parse('{{{charts.durationChart.colors}}}'), borderRadius: 4 }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 800 },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: GRAY_L }, ticks: { color: '#888780', font: { size: 10 } } },
+          y: { grid: { display: false }, ticks: { color: '#5F5E5A', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  // 雷达图
+  var radarCtx = document.getElementById('radarChart');
+  if (radarCtx) {
+    radarCtx.chart = new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: JSON.parse('{{{charts.radarChart.labels}}}'),
+        datasets: [{ label: '{{{charts.radarChart.datasetLabel}}}', data: JSON.parse('{{{charts.radarChart.data}}}'), backgroundColor: '{{{charts.radarChart.bgColor}}}', borderColor: BLUE_D, borderWidth: 2, pointBackgroundColor: BLUE_D, pointRadius: 4 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 800 },
+        plugins: { legend: { display: false } },
+        scales: {
+          r: {
+            min: 0,
+            max: 5,
+            ticks: { stepSize: 1, display: false },
+            grid: { color: '#D3D1C7' },
+            pointLabels: { font: { size: 11 }, color: '#2C2C2A', padding: 8 },
+            angleLines: { color: '#D3D1C7' }
+          }
+        }
+      }
+    });
+  }
+
+  // 通知 Chart.js 渲染完成（供外部检测）
+  document.getElementById('charts-ready') || (function() {
+    var el = document.createElement('div');
+    el.id = 'charts-ready';
+    el.style.display = 'none';
+    document.body.appendChild(el);
+  }());
+
+})();
+</script>

@@ -1,0 +1,31 @@
+# 综合评语生成 Prompt
+
+## 任务说明
+请根据以下学习数据，生成一段综合评语。
+
+## 数据输入
+- 学生姓名: {{student.name}}
+- 任务完成率: {{stats.completion.rate}}%
+- 总任务数: {{stats.completion.total}} 项
+- 已完成任务: {{stats.completion.completed}} 项
+- 重点学科: {{top_subjects}}
+- 学习趋势: {{monthly_trend}}
+- 优势领域: {{strong_areas}}
+- 薄弱领域: {{weak_areas}}
+
+## 输出要求
+1. 评语应鼓励性且有建设性
+2. 控制在 100-150 字之间
+3. 提及具体的完成率数据和学科表现
+4. 对薄弱领域给出温和的改进建议
+5. 以积极正面的语调结束
+
+## 评语结构建议
+1. 开篇肯定：本月整体表现...
+2. 数据支撑：完成率、学科分布等
+3. 亮点表扬：优势领域
+4. 改进建议：薄弱环节（如有）
+5. 鼓励结尾：期待下期表现...
+
+## 示例输出
+"{{student.name}}本月学习表现优异！共完成 {{stats.completion.completed}}/{{stats.completion.total}} 项任务，完成率达到 {{stats.completion.rate}}%。数学和英语学科任务全部完成，展现了扎实的基础。继续保持高效的学习状态，相信通过持续努力，一定能够取得更大的进步！"

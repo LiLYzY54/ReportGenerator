@@ -1,0 +1,61 @@
+{
+  "description": "学习报告字段映射配置",
+  "version": "1.0.0",
+
+  "字段映射": {
+    "学生姓名": "studentName",
+    "日期": "date",
+    "学科": "subject",
+    "任务": "task",
+    "任务名称": "taskName",
+    "完成状态": "completed",
+    "状态": "status",
+    "时长": "duration",
+    "时长(分钟)": "durationMinutes",
+    "备注": "remark",
+    "备注说明": "remark"
+  },
+
+  "完成状态映射": {
+    "✅": "completed",
+    "完成": "completed",
+    "done": "completed",
+    "true": "completed",
+    "yes": "completed",
+    "1": "completed",
+    "△": "partial",
+    "部分完成": "partial",
+    "留空": "pending",
+    "": "pending"
+  },
+
+  "学科映射": {
+    "数学": "math",
+    "语文": "chinese",
+    "英语": "english",
+    "物理": "physics",
+    "化学": "chemistry",
+    "生物": "biology",
+    "历史": "history",
+    "地理": "geography",
+    "政治": "politics",
+    "科学": "science",
+    "体育": "pe",
+    "美术": "art",
+    "音乐": "music"
+  },
+
+  "Excel表格结构": {
+    "伴学记录": {
+      "起始行": 2,
+      "列映射": {
+        "A": "date",
+        "B": "subject",
+        "C": "taskName",
+        "D": "durationMinutes",
+        "E": "completed",
+        "F": "remark"
+      }
+    }
+  }
+}

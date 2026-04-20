@@ -1,0 +1,67 @@
+{
+  "description": "学习报告统计指标配置",
+  "version": "1.0.0",
+  "metrics": [
+    {
+      "key": "completion_rate",
+      "name": "任务完成率",
+      "description": "计算已完成任务占总任务的百分比",
+      "type": "number",
+      "output": "stats.completion.rate"
+    },
+    {
+      "key": "monthly_count",
+      "name": "月度任务统计",
+      "description": "按月份统计任务完成情况",
+      "type": "object",
+      "output": "stats.monthly"
+    },
+    {
+      "key": "subject_distribution",
+      "name": "学科分布",
+      "description": "统计各学科的任务数量和完成率",
+      "type": "object",
+      "output": "stats.subjects"
+    },
+    {
+      "key": "total_tasks",
+      "name": "任务总数",
+      "description": "统计所有任务的数量",
+      "type": "number",
+      "output": "stats.completion.total"
+    },
+    {
+      "key": "completed_tasks",
+      "name": "已完成任务",
+      "description": "统计已完成的任务数量",
+      "type": "number",
+      "output": "stats.completion.completed"
+    }
+  ],
+  "dimensions": [
+    {
+      "key": "completion",
+      "name": "任务完成",
+      "defaultScore": 80,
+      "defaultComment": "任务完成情况良好"
+    },
+    {
+      "key": "consistency",
+      "name": "学习坚持",
+      "defaultScore": 75,
+      "defaultComment": "学习持续性表现稳定"
+    },
+    {
+      "key": "balance",
+      "name": "学科平衡",
+      "defaultScore": 70,
+      "defaultComment": "各学科发展较为均衡"
+    },
+    {
+      "key": "progress",
+      "name": "进步幅度",
+      "defaultScore": 78,
+      "defaultComment": "相比上期有明显进步"
+    }
+  ]
+}

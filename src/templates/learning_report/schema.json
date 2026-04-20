@@ -1,0 +1,423 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "学习报告数据结构定义 - 支持多模板",
+  "version": "2.0.0",
+  "type": "object",
+  "properties": {
+    "brand": {
+      "type": "object",
+      "description": "品牌信息",
+      "properties": {
+        "logo": { "type": "string", "description": "品牌 Logo 文字" },
+        "name": { "type": "string", "description": "品牌名称" },
+        "slogan": { "type": "string", "description": "品牌口号" }
+      }
+    },
+    "report": {
+      "type": "object",
+      "description": "报告基本信息",
+      "properties": {
+        "type": { "type": "string", "description": "报告类型，如'伴学情况报告'" },
+        "title": { "type": "string", "description": "报告标题" },
+        "period": { "type": "string", "description": "报告周期" },
+        "generatedDate": { "type": "string", "description": "生成日期" },
+        "footer": { "type": "string", "description": "页脚文字" }
+      }
+    },
+    "student": {
+      "type": "object",
+      "description": "学生信息",
+      "properties": {
+        "name": { "type": "string", "description": "学生姓名" },
+        "nameShort": { "type": "string", "description": "姓名简称（用于头像）" },
+        "grade": { "type": "string", "description": "年级全称" },
+        "gradeShort": { "type": "string", "description": "年级简称，如 G5" },
+        "gender": { "type": "string", "description": "性别" },
+        "location": { "type": "string", "description": "地区" },
+        "textbooks": { "type": "string", "description": "教材信息" },
+        "tags": {
+          "type": "array",
+          "description": "学生标签",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "color": { "type": "string", "enum": ["blue", "green", "amber", "coral"] }
+            }
+          }
+        }
+      }
+    },
+    "kpis": {
+      "type": "object",
+      "description": "KPI 指标卡片",
+      "properties": {
+        "days": { "type": "number", "description": "伴学天数" },
+        "recordedCount": { "type": "number", "description": "有记录次数" },
+        "phases": { "type": "number", "description": "阶段划分数" }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "description": "统计数据（支持多种模板扩展）",
+      "properties": {
+        "completion": {
+          "type": "object",
+          "description": "完成率统计",
+          "properties": {
+            "total": { "type": "number" },
+            "completed": { "type": "number" },
+            "rate": { "type": "number" }
+          }
+        },
+        "completionRate": {
+          "type": "object",
+          "description": "完成率卡片",
+          "properties": {
+            "label": { "type": "string" },
+            "value": { "type": "number" },
+            "trend": { "type": "string" }
+          }
+        },
+        "readingRate": {
+          "type": "object",
+          "description": "阅读打卡统计",
+          "properties": {
+            "label": { "type": "string" },
+            "value": { "type": "number" },
+            "desc": { "type": "string" }
+          }
+        },
+        "mathCoverage": {
+          "type": "object",
+          "description": "数学专项覆盖",
+          "properties": {
+            "label": { "type": "string" },
+            "value": { "type": "number" },
+            "desc": { "type": "string" }
+          }
+        },
+        "winterIntensity": {
+          "type": "object",
+          "description": "集训强度",
+          "properties": {
+            "label": { "type": "string" },
+            "value": { "type": "string" },
+            "desc": { "type": "string" }
+          }
+        },
+        "monthly": {
+          "type": "object",
+          "description": "月度统计",
+          "properties": {
+            "months": { "type": "array", "items": { "type": "string" } },
+            "data": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "total": { "type": "number" },
+                  "completed": { "type": "number" },
+                  "rate": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "subjects": {
+          "type": "object",
+          "description": "学科分布",
+          "properties": {
+            "subjects": { "type": "array", "items": { "type": "string" } },
+            "data": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "total": { "type": "number" },
+                  "completed": { "type": "number" },
+                  "rate": { "type": "number" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "description": "学生画像",
+      "properties": {
+        "personal": {
+          "type": "object",
+          "properties": {
+            "icon": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string" },
+                  "color": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "learning": {
+          "type": "object",
+          "properties": {
+            "icon": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string" },
+                  "bgColor": { "type": "string" },
+                  "textColor": { "type": "string" },
+                  "color": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "阶段数据列表",
+      "items": {
+        "type": "object",
+        "properties": {
+          "num": { "type": "number" },
+          "name": { "type": "string" },
+          "subtitle": { "type": "string" },
+          "dateRange": { "type": "string" },
+          "feature": { "type": "string" },
+          "subjects": {
+            "type": "object",
+            "properties": {
+              "yu": { "type": "array", "items": { "type": "string" } },
+              "shu": { "type": "array", "items": { "type": "string" } },
+              "ying": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "charts": {
+      "type": "object",
+      "description": "图表数据",
+      "properties": {
+        "theme": {
+          "type": "object",
+          "description": "图表主题色",
+          "properties": {
+            "blue": { "type": "string" },
+            "blueDark": { "type": "string" },
+            "green": { "type": "string" },
+            "amber": { "type": "string" },
+            "coral": { "type": "string" },
+            "pink": { "type": "string" },
+            "gray": { "type": "string" },
+            "grayLight": { "type": "string" }
+          }
+        },
+        "monthlyChart": {
+          "type": "object",
+          "description": "月度柱状图",
+          "properties": {
+            "title": { "type": "string" },
+            "labels": { "type": "array", "items": { "type": "string" } },
+            "datasetLabel": { "type": "string" },
+            "data": { "type": "array", "items": { "type": "number" } },
+            "colors": { "type": "array", "items": { "type": "string" } },
+            "max": { "type": "number" }
+          }
+        },
+        "subjectChart": {
+          "type": "object",
+          "description": "学科饼图",
+          "properties": {
+            "title": { "type": "string" },
+            "labels": { "type": "array", "items": { "type": "string" } },
+            "data": { "type": "array", "items": { "type": "number" } },
+            "colors": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "subjectProgress": {
+          "type": "object",
+          "description": "学科进度条",
+          "properties": {
+            "title": { "type": "string" },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "value": { "type": "number" },
+                  "colorClass": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "durationChart": {
+          "type": "object",
+          "description": "时长分布图",
+          "properties": {
+            "title": { "type": "string" },
+            "labels": { "type": "array", "items": { "type": "string" } },
+            "datasetLabel": { "type": "string" },
+            "data": { "type": "array", "items": { "type": "number" } },
+            "colors": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "radarChart": {
+          "type": "object",
+          "description": "雷达图",
+          "properties": {
+            "title": { "type": "string" },
+            "note": { "type": "string" },
+            "dimensionTitle": { "type": "string" },
+            "labels": { "type": "array", "items": { "type": "string" } },
+            "datasetLabel": { "type": "string" },
+            "data": { "type": "array", "items": { "type": "number" } },
+            "bgColor": { "type": "string" },
+            "dimensions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "score": { "type": "string" },
+                  "percent": { "type": "number" },
+                  "colorClass": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "records": {
+      "type": "object",
+      "description": "伴学记录明细",
+      "properties": {
+        "title": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": { "type": "string" },
+              "phaseNum": { "type": "number" },
+              "phaseShort": { "type": "string" },
+              "timeRange": { "type": "string" },
+              "subjects": {
+                "type": "object",
+                "properties": {
+                  "yu": { "type": "array", "items": { "type": "string" } },
+                  "shu": { "type": "array", "items": { "type": "string" } },
+                  "ying": { "type": "array", "items": { "type": "string" } },
+                  "zong": { "type": "array", "items": { "type": "string" } }
+                }
+              },
+              "statusDot": { "type": "string" },
+              "statusText": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "description": "综合评价与建议",
+      "properties": {
+        "summary": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "content": { "type": "string" }
+          }
+        },
+        "subject": {
+          "type": "object",
+          "properties": {
+            "yu": { "type": "object", "properties": { "title": { "type": "string" }, "content": { "type": "string" } } },
+            "shu": { "type": "object", "properties": { "title": { "type": "string" }, "content": { "type": "string" } } },
+            "ying": { "type": "object", "properties": { "title": { "type": "string" }, "content": { "type": "string" } } }
+          }
+        },
+        "suggestions": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "num": { "type": "number" },
+                  "content": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "description": "页脚信息",
+      "properties": {
+        "dataSource": { "type": "string" },
+        "pageInfo": { "type": "string" },
+        "pageInfo2": { "type": "string" },
+        "pageInfo3": { "type": "string" },
+        "completionNote": { "type": "string" },
+        "reportNote": { "type": "string" }
+      }
+    },
+    "summary_stats": {
+      "type": "object",
+      "description": "统计结果汇总（来自 compute.js）",
+      "properties": {
+        "completion_rate": { "type": "number" },
+        "completion_total": { "type": "number" },
+        "completion_completed": { "type": "number" },
+        "monthly_count": { "type": "object" },
+        "subject_distribution": { "type": "object" }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "description": "AI 生成内容",
+      "properties": {
+        "summary": { "type": "string", "description": "综合评语" },
+        "subject_comments": {
+          "type": "array",
+          "description": "学科评价",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": { "type": "string" },
+              "comment": { "type": "string" }
+            }
+          }
+        },
+        "suggestions": {
+          "type": "array",
+          "description": "改进建议",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
