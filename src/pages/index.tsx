@@ -8,7 +8,7 @@
  * 4. 统一视觉风格
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { parseExcel } from '../lib/parser';
 import { compute } from '../lib/compute';
 import { generateSummary } from '../lib/ai';
@@ -121,27 +121,6 @@ export default function ReportGenerator() {
     }
   }, [state.file]);
 
-  // 下载报告 PDF
-  // 在新窗口打开报告
-  const openPreview = () => {
-    if (!state.fullHtml) return;
-    const fullDoc = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>学习报告</title>
-</head>
-<body>
-${state.fullHtml}
-</body>
-</html>`;
-    const win = window.open('', '_blank');
-    if (!win) { alert('请允许弹出窗口'); return; }
-    win.document.write(fullDoc);
-    win.document.close();
-  };
-
   // 等待图表渲染完成的信号
   const waitForChartsReady = (win: Window, timeout = 5000): Promise<void> => {
     return new Promise((resolve) => {
@@ -199,7 +178,7 @@ ${state.fullHtml}
         jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
-      await html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt as any).from(element).save();
     } finally {
       win.close();
     }
@@ -404,28 +383,6 @@ function extractBodyContent(html: string): string {
   }
 
   return afterMarker.slice(0, chartIndex).trim();
-}
-
-/**
- * 将内容重新包裹成完整 HTML
- */
-function wrapHtmlContent(content: string): string {
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 24px;
-      background: #fff;
-    }
-  </style>
-</head>
-<body>${content}</body>
-</html>`;
 }
 
 function buildFinalData(parsed: any, computed: any, aiSummary: string) {
