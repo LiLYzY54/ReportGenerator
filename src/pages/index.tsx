@@ -15,7 +15,7 @@ import { generateSummary } from '../lib/ai';
 import { fillTemplate } from '../lib/render';
 import html2pdf from 'html2pdf.js';
 
-const TEMPLATE_PATH = '/templates/learning_report/report_template_embed.html';
+const TEMPLATE_PATH = new URL('../templates/learning_report/report_template_embed.html', import.meta.url).href;
 
 const TEMPLATES = [
   {
