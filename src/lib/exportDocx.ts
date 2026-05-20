@@ -106,7 +106,7 @@ export async function exportToDocx(data: any, filename: string, chartImages: Rec
             new ImageRun({
               data: base64ToUint8Array(chartImages.monthChart),
               transformation: { width: 500, height: 200 },
-            }),
+            } as any),
           ],
         }),
       ] : [new Paragraph({ text: "[图表数据加载中...]" })]),
@@ -135,7 +135,7 @@ export async function exportToDocx(data: any, filename: string, chartImages: Rec
                       new ImageRun({
                         data: base64ToUint8Array(chartImages.subjectChart),
                         transformation: { width: 200, height: 200 },
-                      }),
+                      } as any),
                     ],
                   }),
                 ] : [],
@@ -186,7 +186,7 @@ export async function exportToDocx(data: any, filename: string, chartImages: Rec
                       new ImageRun({
                         data: base64ToUint8Array(chartImages.radarChart),
                         transformation: { width: 250, height: 250 },
-                      }),
+                      } as any),
                     ],
                   }),
                 ] : [],
