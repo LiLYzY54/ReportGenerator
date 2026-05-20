@@ -13,15 +13,24 @@ import { parseExcel } from '../lib/parser';
 import { compute } from '../lib/compute';
 import { generateSummary } from '../lib/ai';
 import { fillTemplate } from '../lib/render';
+import { filterRecordsByRange, getWeekRange, getFullRange, formatDateRange, parseDateToObject } from '../lib/filter';
 import html2pdf from 'html2pdf.js';
 
-const TEMPLATE_PATH = new URL('../templates/learning_report/report_template_embed.html', import.meta.url).href;
+const TEMPLATE_PATHS: Record<string, string> = {
+  'full': '/ReportGenerator/templates/learning_report/report_template_embed.html',
+  'weekly': '/ReportGenerator/templates/learning_report/report_template_weekly.html'
+};
 
 const TEMPLATES = [
   {
-    id: 'learning_report',
-    name: '学习报告模板',
-    description: '适用于学习记录分析'
+    id: 'full',
+    name: '全局报告',
+    description: '完整阶段数据，含学习阶段概览'
+  },
+  {
+    id: 'weekly',
+    name: '周报',
+    description: '当周数据，简洁版'
   }
 ];
 
@@ -84,30 +93,51 @@ export default function ReportGenerator() {
         throw new Error('Excel 文件中没有找到有效数据');
       }
 
-      // 2. 计算统计
-      const computed = compute(parsed.records, {});
+      // 2. 根据模板类型过滤数据
+      let filteredRecords;
+      let dateRange;
 
-      // 3. 生成 AI 摘要
+      if (state.selectedTemplate === 'weekly') {
+        // 周报：使用本周范围
+        dateRange = getWeekRange();
+        filteredRecords = filterRecordsByRange(parsed.records, dateRange.start, dateRange.end);
+      } else {
+        // 全局报告：使用全量数据
+        dateRange = getFullRange(parsed.records);
+        filteredRecords = parsed.records;
+      }
+
+      // 3. 计算统计（基于过滤后的数据）
+      const computed = compute(filteredRecords, {});
+
+      // 4. 生成 AI 摘要（传入增强后的统计数据和原始记录）
       const aiSummary = await generateSummary({
         student: parsed.metadata.student,
         summary_stats: computed.summary_stats,
-        charts: computed.charts
+        records: filteredRecords
       }, { apiKey: import.meta.env.VITE_OPENAI_API_KEY });
 
-      // 4. 构造 finalData
-      const finalData = buildFinalData(parsed, computed, aiSummary);
+      // 5. 构造 finalData（传入过滤后的数据和日期范围）
+      const finalData = buildFinalData(
+        { ...parsed, records: filteredRecords },
+        computed,
+        aiSummary,
+        dateRange,
+        state.selectedTemplate
+      );
 
-      // 5. 读取并填充模板
-      const templateResponse = await fetch(TEMPLATE_PATH);
+      // 6. 读取并填充模板
+      const templatePath = TEMPLATE_PATHS[state.selectedTemplate] || TEMPLATE_PATHS['full'];
+      const templateResponse = await fetch(templatePath);
       const template = await templateResponse.text();
       const html = fillTemplate(template, finalData);
 
-      // 6. 提取内容部分（去除 html/head/body 包裹）
+      // 7. 提取内容部分（去除 html/head/body 包裹）
       const content = extractBodyContent(html);
 
       setState(s => ({ ...s, resultHtml: content, fullHtml: html, loading: false }));
 
-      // 7. 滚动到报告区
+      // 8. 滚动到报告区
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
@@ -119,7 +149,7 @@ export default function ReportGenerator() {
         loading: false
       }));
     }
-  }, [state.file]);
+  }, [state.file, state.selectedTemplate]);
 
   // 等待图表渲染完成的信号
   const waitForChartsReady = (win: Window, timeout = 5000): Promise<void> => {
@@ -385,15 +415,21 @@ function extractBodyContent(html: string): string {
   return afterMarker.slice(0, chartIndex).trim();
 }
 
-function buildFinalData(parsed: any, computed: any, aiSummary: string) {
+function buildFinalData(parsed: any, computed: any, aiSummary: string | object, dateRange?: { start: Date; end: Date }, templateType?: string) {
   const student = parsed.metadata?.student || {};
   const records = parsed.records || [];
+  const isWeekly = templateType === 'weekly';
 
-  const monthlyCount = computed.summary_stats?.monthly_count;
-  const months = monthlyCount?.months || [];
-  const monthlyData = monthlyCount?.data || {};
-  const monthlyValues = months.map((m: string) => monthlyData[m]?.total || 0);
-  const maxMonthly = Math.max(...monthlyValues, 1);
+  // 周任务统计（周一~周日）- 根据日期计算星期几
+  const weekCounts = [0, 0, 0, 0, 0, 0, 0];
+  const dayIndexMap = [6, 0, 1, 2, 3, 4, 5]; // 周日=6, 周一=0, ...
+  for (const r of records) {
+    const dateObj = parseDateToObject(r.date);
+    if (dateObj) {
+      const dayIndex = dayIndexMap[dateObj.getDay()];
+      weekCounts[dayIndex]++;
+    }
+  }
 
   const subjectDist = computed.summary_stats?.subject_distribution;
   const subjects = subjectDist?.subjects || [];
@@ -406,11 +442,80 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string) {
     '语文': '#3B6D11', '数学': '#185FA5', '英语': '#D85A30', '综合': '#993556'
   };
 
+  // 判断年级是否显示阅读打卡维度（G1-G6显示）
+  const gradeNum = parseInt(student.grade?.replace('G', '') || '0');
+  const showReadingDimension = gradeNum >= 1 && gradeNum <= 6;
+
+  // 格式化日期范围
+  const periodStr = dateRange ? formatDateRange(dateRange.start, dateRange.end) : '全周期';
+
+  // 学习时长分布统计
+  const durationBuckets = [0, 0, 0, 0, 0]; // 1小时以内, 1-2小时, 2-3小时, 3-4小时, 4小时以上
+  for (const r of records) {
+    const dur = r.duration || 0;
+    if (dur > 0 && dur <= 60) durationBuckets[0]++;
+    else if (dur > 60 && dur <= 120) durationBuckets[1]++;
+    else if (dur > 120 && dur <= 180) durationBuckets[2]++;
+    else if (dur > 180 && dur <= 240) durationBuckets[3]++;
+    else if (dur > 240) durationBuckets[4]++;
+  }
+
+  // 雷达图维度：根据学科完成率动态生成
+  const radarDimensions = [];
+  const subjectStats = computed.summary_stats?.subjectStats || {};
+
+  // 任务执行力 = 整体完成率
+  const overallRate = computed.summary_stats?.completion_rate || 0;
+  if (overallRate > 0) {
+    radarDimensions.push({
+      name: '任务执行力',
+      score: (overallRate / 20).toFixed(1),
+      percent: overallRate,
+      colorClass: overallRate >= 80 ? 'g' : overallRate >= 60 ? 'a' : 'n'
+    });
+  }
+
+  // 学科专项（根据实际数据）
+  const mathRate = subjectStats.math?.rate || 0;
+  if (mathRate > 0) {
+    radarDimensions.push({
+      name: '数学专项',
+      score: (mathRate / 20).toFixed(1),
+      percent: mathRate,
+      colorClass: mathRate >= 80 ? 'g' : mathRate >= 60 ? 'a' : 'n'
+    });
+  }
+
+  const chineseRate = subjectStats.chinese?.rate || 0;
+  if (chineseRate > 0) {
+    radarDimensions.push({
+      name: '语文综合',
+      score: (chineseRate / 20).toFixed(1),
+      percent: chineseRate,
+      colorClass: chineseRate >= 80 ? 'g' : chineseRate >= 60 ? 'a' : 'n'
+    });
+  }
+
+  const englishRate = subjectStats.english?.rate || 0;
+  if (englishRate > 0) {
+    radarDimensions.push({
+      name: '英语词汇',
+      score: (englishRate / 20).toFixed(1),
+      percent: englishRate,
+      colorClass: englishRate >= 80 ? 'g' : englishRate >= 60 ? 'a' : 'n'
+    });
+  }
+
+  // 生成雷达图标签和数据
+  const radarLabels = radarDimensions.map(d => d.name);
+  const radarData = radarDimensions.map(d => parseFloat(d.score));
+
   return {
-    brand: { logo: '纪', name: '纪爸爸陪跑团', slogan: '每一步成长，我们都在' },
+    showReadingDimension,
+    brand: { logo: '金', name: '北大金秋伴学营', slogan: '每一步成长，我们都在' },
     report: {
-      type: '伴学情况报告',
-      period: '2025.12.20 — 2026.04.07',
+      type: isWeekly ? '伴学周报' : '伴学情况报告',
+      period: periodStr,
       generatedDate: new Date().toLocaleDateString('zh-CN')
     },
     student: {
@@ -438,14 +543,29 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string) {
         value: computed.summary_stats?.completion_rate || 0,
         trend: (computed.summary_stats?.completion_rate || 0) >= 70 ? '↑ 稳步提升趋势' : '↓ 需加强'
       },
-      readingRate: { label: '绘本/阅读打卡坚持率', value: 88, desc: '贯穿全程的核心习惯' },
+      readingRate: { label: '绘本/阅读打卡坚持率', value: computed.summary_stats?.subjectDetails?.['语文'] ? Math.round((subjectData['语文']?.rate || 0) * 0.9) : 88, desc: isWeekly ? '本周继续保持' : '贯穿全程的核心习惯' },
       mathCoverage: {
         label: '数学专项覆盖次数',
         value: subjectData['数学']?.total || 0,
         desc: '含计算、卷子、错题讲解'
       },
-      winterIntensity: { label: '寒假集训强度', value: '高', desc: '每日上下午双段学习' }
+      weekIntensity: isWeekly ? { label: '本周学习强度', value: records.length > 10 ? '高' : records.length > 5 ? '中' : '一般', desc: '本周共' + records.length + '次伴学记录' } : null,
+      winterIntensity: !isWeekly ? { label: '寒假集训强度', value: '高', desc: '每日上下午双段学习' } : null
     },
+    statsNoWinter: isWeekly ? {
+      completionRate: {
+        label: '整体任务完成率',
+        value: computed.summary_stats?.completion_rate || 0,
+        trend: (computed.summary_stats?.completion_rate || 0) >= 70 ? '↑ 稳步提升趋势' : '↓ 需加强'
+      },
+      readingRate: { label: '绘本/阅读打卡坚持率', value: computed.summary_stats?.subjectDetails?.['语文'] ? Math.round((subjectData['语文']?.rate || 0) * 0.9) : 88, desc: '本周继续保持' },
+      mathCoverage: {
+        label: '数学专项覆盖次数',
+        value: subjectData['数学']?.total || 0,
+        desc: '含计算、卷子、错题讲解'
+      },
+      weekIntensity: { label: '本周学习强度', value: records.length > 10 ? '高' : records.length > 5 ? '中' : '一般', desc: '本周共' + records.length + '次伴学记录' }
+    } : null,
     charts: {
       theme: {
         blue: '#378ADD', blueDark: '#185FA5', green: '#1D9E75',
@@ -453,15 +573,12 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string) {
         gray: '#B4B2A9', grayLight: '#E8E6E0'
       },
       monthlyChart: {
-        title: '各月伴学次数',
-        labels: JSON.stringify(months.map((m: string) => {
-          const parts = m.split('.');
-          return parts[1] ? parts[1] + '月' : m;
-        })),
-        datasetLabel: '伴学次数',
-        data: JSON.stringify(monthlyValues),
-        colors: JSON.stringify(['#185FA5', '#185FA5', '#EF9F27', '#1D9E75', '#D85A30'].slice(0, months.length)),
-        max: Math.ceil(maxMonthly / 5) * 5 + 5
+        title: '本周任务分布',
+        labels: JSON.stringify(['周一','周二','周三','周四','周五','周六','周日']),
+        datasetLabel: '任务次数',
+        data: JSON.stringify(weekCounts),
+        colors: JSON.stringify(['#C41E3A', '#E8384F', '#C41E3A', '#E8384F', '#C41E3A', '#E8384F', '#C41E3A']),
+        max: Math.ceil(Math.max(...weekCounts, 1) / 5) * 5 + 5
       },
       subjectChart: {
         title: '学科任务分布',
@@ -470,59 +587,53 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string) {
         colors: JSON.stringify(subjects.slice(0, 4).map((s: string) => subjectColorMap[s] || '#888888'))
       },
       subjectProgress: {
-        title: '三科任务完成率（整体估算）',
+        title: '三科任务完成率',
         items: [
-          { name: '语文', value: subjectData['语文']?.rate || 90, colorClass: 'g' },
-          { name: '数学', value: subjectData['数学']?.rate || 88, colorClass: 'g' },
-          { name: '英语', value: subjectData['英语']?.rate || 85, colorClass: 'g' },
-          { name: '阅读/绘本打卡', value: 88, colorClass: 'g' },
-          { name: '专项练习', value: 78, colorClass: 'a' }
-        ]
+          { name: '语文', value: subjectData['语文']?.rate || 0, colorClass: subjectData['语文']?.rate >= 80 ? 'g' : subjectData['语文']?.rate >= 60 ? 'a' : 'n' },
+          { name: '数学', value: subjectData['数学']?.rate || 0, colorClass: subjectData['数学']?.rate >= 80 ? 'g' : subjectData['数学']?.rate >= 60 ? 'a' : 'n' },
+          { name: '英语', value: subjectData['英语']?.rate || 0, colorClass: subjectData['英语']?.rate >= 80 ? 'g' : subjectData['英语']?.rate >= 60 ? 'a' : 'n' }
+        ].filter(item => item.value > 0) // 只显示有数据的学科
       },
       durationChart: {
         title: '单次伴学时长分布',
         labels: JSON.stringify(['1小时以内', '1—2小时', '2—3小时', '3—4小时', '4小时以上']),
         datasetLabel: '次数',
-        data: JSON.stringify([5, 18, 22, 9, 4]),
+        data: JSON.stringify(durationBuckets),
         colors: JSON.stringify(['#B4B2A9', '#378ADD', '#185FA5', '#EF9F27', '#D85A30'])
       },
       radarChart: {
         title: '综合能力雷达（伴学观察）',
-        note: '评分依据：空中课堂记录中的任务完成、主动性、坚持性等综合表现（满分5分）',
+        note: '评分依据：伴学记录中的任务完成、主动性、坚持性等综合表现（满分5分）',
         dimensionTitle: '各维度评分说明',
-        labels: JSON.stringify(['任务执行力', '主动学习', '习惯坚持', '数学专项', '英语词汇', '语文综合']),
+        labels: JSON.stringify(radarLabels),
+        labelsNoReading: JSON.stringify(radarLabels),
         datasetLabel: '伴学综合评估',
-        data: JSON.stringify([4.6, 4.0, 4.4, 3.2, 3.0, 3.8]),
+        data: JSON.stringify(radarData),
+        dataNoReading: JSON.stringify(radarData),
         bgColor: 'rgba(24,95,165,0.12)',
-        dimensions: [
-          { name: '任务执行力', score: '4.6', percent: 92, colorClass: 'g' },
-          { name: '学习主动性', score: '4.0', percent: 80, colorClass: 'g' },
-          { name: '习惯坚持性（阅读打卡）', score: '4.4', percent: 88, colorClass: 'g' },
-          { name: '数学专项突破', score: '3.2', percent: 64, colorClass: 'a' },
-          { name: '英语词汇积累', score: '3.0', percent: 60, colorClass: 'a' },
-          { name: '语文综合表现', score: '3.8', percent: 76, colorClass: 'g' }
-        ]
+        dimensions: radarDimensions,
+        dimensionsNoReading: radarDimensions
       }
     },
     summary_stats: computed.summary_stats,
-    ai: { summary: aiSummary },
+    ai: {
+      summary: (typeof aiSummary === 'string' ? aiSummary : (aiSummary as any).overall) || JSON.stringify(aiSummary)
+    },
     profiles: {
       personal: {
         icon: '🎯', title: '个人画像',
-        description: '该学生性格开朗，学习态度端正，具有较强的自主学习能力和良好的学习习惯。',
-        tags: [
-          { text: '自主完成作业', color: 'blue' },
-          { text: '沟通能力强', color: 'green' },
-          { text: '兴趣驱动型学习', color: 'amber' }
-        ]
+        description: (typeof aiSummary === 'string' ? aiSummary : (aiSummary as any).overall ? (aiSummary as any).overall.slice(0, 60) : '数据分析中...'),
+        tags: (computed.summary_stats.behaviorTags || []).slice(0, 3).map((tag: string) => ({
+          text: tag,
+          color: tag.includes('不稳定') ? 'amber' : tag.includes('强') ? 'green' : 'blue'
+        }))
       },
       learning: {
         icon: '📚', title: '学习特征',
-        description: '语文基础扎实，数学思维活跃，英语兴趣浓厚，综合能力均衡发展。',
+        description: '基于学习数据分析得出的学科特点',
         tags: [
-          { text: '语文基础扎实', bgColor: '#E8F5E9', textColor: '#2E7D32' },
-          { text: '数学思维活跃', bgColor: '#E3F2FD', textColor: '#1565C0' },
-          { text: '英语兴趣浓厚', bgColor: '#FFF3E0', textColor: '#E65100' }
+          { text: computed.summary_stats.weakSubjects?.[0] ? '薄弱：' + computed.summary_stats.weakSubjects[0] : '各科较均衡', bgColor: '#FFF3E0', textColor: '#E65100' },
+          { text: computed.summary_stats.strongSubjects?.[0] ? '强项：' + computed.summary_stats.strongSubjects[0] : '待发掘', bgColor: '#E8F5E9', textColor: '#2E7D32' }
         ]
       }
     },
@@ -536,7 +647,6 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string) {
       pageInfo: '第 1 页 / 共 3 页',
       completionNote: '完成率统计基于实际记录',
       pageInfo2: '第 2 页 / 共 3 页',
-      reportNote: '综合评价由AI辅助生成',
       pageInfo3: '第 3 页 / 共 3 页'
     },
     records: {
@@ -557,19 +667,24 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string) {
       }))
     },
     evaluation: {
-      summary: { title: '综合评价', content: aiSummary },
-      subject: {
-        yu: { title: '语文学习评估', content: '语文基础扎实，字帖练习认真，拼音掌握良好，阅读理解能力稳步提升。' },
-        shu: { title: '数学学习评估', content: '数学思维活跃，计算能力较强，同步练习完成质量较高。' },
-        ying: { title: '英语学习评估', content: '英语兴趣浓厚，绘本阅读坚持较好，单词记忆能力有进步。' }
+      summary: {
+        title: '综合评价',
+        content: typeof aiSummary === 'string' ? aiSummary : ((aiSummary as any).overall || '数据分析中...')
       },
+      subjects: (() => {
+        const subs = typeof aiSummary === 'string' ? {} : ((aiSummary as any).subjects || {});
+        return Object.keys(subs).map(key => ({
+          key,
+          title: `${key}学习评估`,
+          content: subs[key] || '暂无数据'
+        }));
+      })(),
       suggestions: {
         title: '改进建议',
-        items: [
-          { num: '1', content: '继续保持每日阅读习惯，建议增加英文原版绘本阅读量' },
-          { num: '2', content: '数学薄弱题型需加强专项训练，可针对性做五三同步练习' },
-          { num: '3', content: '建议定期复习错题本，每两周进行一次错题重做' }
-        ]
+        items: (typeof aiSummary === 'string' ? [] : ((aiSummary as any).suggestions || [])).map((s: string, i: number) => ({
+          num: String(i + 1),
+          content: s
+        }))
       }
     }
   };
