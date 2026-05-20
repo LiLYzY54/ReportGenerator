@@ -8,29 +8,33 @@
  * 生成学习评价摘要
  */
 export async function generateSummary(data, options = {}) {
-  const { apiKey, timeout = 12000 } = options;
+  const { 
+    apiKey, 
+    baseUrl = 'https://api.deepseek.com', 
+    model = 'deepseek-chat',
+    timeout = 20000 
+  } = options;
 
-  // 1. 构造 Prompt 数据（核心：全量任务流水）
+  // 1. 构造 Prompt 数据
   const promptData = buildPromptData(data);
   const prompt = buildAnalysisPrompt(promptData);
 
-  // 如果没有 API key
   if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY') {
-    return generateSummaryFallback(promptData, 'Missing API Key');
+    return generateSummaryFallback(promptData, '未配置 API Key');
   }
 
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: model,
         messages: [
           {
             role: 'system',
@@ -38,7 +42,8 @@ export async function generateSummary(data, options = {}) {
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.2
+        temperature: 0.1,
+        stream: false
       }),
       signal: controller.signal
     });
@@ -46,7 +51,8 @@ export async function generateSummary(data, options = {}) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`API 返回错误: ${response.status}`);
+      const errJson = await response.json().catch(() => ({}));
+      throw new Error(errJson.error?.message || `API 错误: ${response.status}`);
     }
 
     const result = await response.json();
@@ -58,9 +64,10 @@ export async function generateSummary(data, options = {}) {
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
       return { ...parsed, isAI: true };
     } catch (e) {
+      // 如果不是 JSON，尝试解析整体文本
       return { overall: text, isAI: true };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[AI] 诊断失败:', error.message);
     return generateSummaryFallback(promptData, error.message);
   }

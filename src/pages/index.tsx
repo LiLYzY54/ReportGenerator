@@ -8,7 +8,7 @@
  * 4. 统一视觉风格
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { parseExcel } from '../lib/parser';
 import { compute } from '../lib/compute';
 import { generateSummary } from '../lib/ai';
@@ -34,6 +34,12 @@ const TEMPLATES = [
   }
 ];
 
+interface AppSettings {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+}
+
 interface AppState {
   file: File | null;
   selectedTemplate: string;
@@ -43,6 +49,8 @@ interface AppState {
   reportData: any | null;
   error: string | null;
   currentStep: 1 | 2 | 3;
+  showSettings: boolean;
+  settings: AppSettings;
 }
 
 export default function ReportGenerator() {
@@ -54,8 +62,31 @@ export default function ReportGenerator() {
     fullHtml: null,
     reportData: null,
     error: null,
-    currentStep: 1
+    currentStep: 1,
+    showSettings: false,
+    settings: {
+      apiKey: '',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat'
+    }
   });
+
+  // 从本地加载设置
+  useEffect(() => {
+    const saved = localStorage.getItem('report_generator_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setState(s => ({ ...s, settings: { ...s.settings, ...parsed } }));
+      } catch (e) {}
+    }
+  }, []);
+
+  // 保存设置
+  const saveSettings = (newSettings: AppSettings) => {
+    localStorage.setItem('report_generator_settings', JSON.stringify(newSettings));
+    setState(s => ({ ...s, settings: newSettings, showSettings: false }));
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -119,14 +150,18 @@ export default function ReportGenerator() {
       // 3. 计算统计（基于过滤后的数据）
       const computed = compute(filteredRecords, {});
 
-      // 4. 生成 AI 摘要（传入增强后的统计数据和原始记录）
+      // 4. 生成 AI 摘要 (优先使用自定义设置)
       const aiSummary = await generateSummary({
         student: parsed.metadata.student,
         summary_stats: computed.summary_stats,
         records: filteredRecords
-      }, { apiKey: import.meta.env.VITE_OPENAI_API_KEY });
+      }, { 
+        apiKey: state.settings.apiKey || import.meta.env.VITE_OPENAI_API_KEY,
+        baseUrl: state.settings.baseUrl,
+        model: state.settings.model
+      });
 
-      // 5. 构造 finalData（传入过滤后的数据和日期范围）
+      // 5. 构造 finalData
       const finalData = buildFinalData(
         { ...parsed, records: filteredRecords },
         computed,
@@ -141,7 +176,7 @@ export default function ReportGenerator() {
       const template = await templateResponse.text();
       const html = fillTemplate(template, finalData);
 
-      // 7. 提取内容部分（去除 html/head/body 包裹）
+      // 7. 提取内容部分
       const content = extractBodyContent(html);
 
       setState(s => ({ 
@@ -164,19 +199,19 @@ export default function ReportGenerator() {
         loading: false
       }));
     }
-  }, [state.file, state.selectedTemplate]);
+  }, [state.file, state.selectedTemplate, state.settings]);
 
   // 下载报告 DOCX (纯前端生成)
   const downloadReport = async () => {
     if (!state.reportData) return;
-    
+
     setState(s => ({ ...s, loading: true }));
 
     try {
       // 捕获预览 iframe 中的图表图片
       const iframe = document.querySelector('iframe');
       const chartImages: Record<string, string> = {};
-      
+
       if (iframe && iframe.contentDocument) {
         const ids = ['monthChart', 'subjectChart', 'durationChart', 'radarChart'];
         for (const id of ids) {
@@ -198,7 +233,8 @@ export default function ReportGenerator() {
 
   // 重置
   const reset = () => {
-    setState({
+    setState(s => ({
+      ...s,
       file: null,
       selectedTemplate: TEMPLATES[0].id,
       loading: false,
@@ -207,7 +243,7 @@ export default function ReportGenerator() {
       reportData: null,
       error: null,
       currentStep: 1
-    });
+    }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -227,79 +263,102 @@ export default function ReportGenerator() {
       <div className="max-w-[800px] mx-auto px-4 py-12">
 
         {/* 标题区 */}
-        <header className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-gray-800">
-            报告生成工具
-          </h1>
-          <p className="text-gray-500 text-sm mt-2">
-            上传学习记录，自动生成分析报告
-          </p>
+        <header className="flex items-center justify-between mb-8">
+          <div className="w-10"></div> {/* 占位平衡按钮 */}
+          <div className="text-center">
+            <h1 className="text-2xl font-semibold text-gray-800">报告生成工具</h1>
+            <p className="text-gray-500 text-sm mt-1">自动生成深度学情分析报告</p>
+          </div>
+          <button 
+            onClick={() => setState(s => ({ ...s, showSettings: true }))}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+            title="配置 AI"
+          >
+            ⚙️
+          </button>
         </header>
+
+        {/* 设置弹窗 */}
+        {state.showSettings && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <h2 className="text-lg font-semibold mb-4">AI 诊断配置</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">DeepSeek API Key</label>
+                  <input 
+                    type="password"
+                    placeholder="sk-..."
+                    value={state.settings.apiKey}
+                    onChange={e => setState(s => ({ ...s, settings: { ...s.settings, apiKey: e.target.value } }))}
+                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">API 地址 (Base URL)</label>
+                  <input 
+                    type="text"
+                    value={state.settings.baseUrl}
+                    onChange={e => setState(s => ({ ...s, settings: { ...s.settings, baseUrl: e.target.value } }))}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">模型 (Model)</label>
+                  <input 
+                    type="text"
+                    value={state.settings.model}
+                    onChange={e => setState(s => ({ ...s, settings: { ...s.settings, model: e.target.value } }))}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button 
+                  onClick={() => setState(s => ({ ...s, showSettings: false }))}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium border hover:bg-gray-50"
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={() => saveSettings(state.settings)}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  保存并应用
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 步骤引导 */}
         <StepIndicator />
 
-        {/* 操作卡片（合并版） */}
+        {/* 操作卡片 */}
         {!state.resultHtml && (
           <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
-
             {/* 上传文件 */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-3 block">
-                上传 Excel 文件
-              </label>
+              <label className="text-sm font-medium text-gray-700 mb-3 block">上传 Excel 文件</label>
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className={`
-                  border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-                  transition-colors duration-150
-                  ${state.file
-                    ? 'border-gray-300 bg-gray-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}
-                `}
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${state.file ? 'border-gray-300 bg-gray-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-
+                <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="hidden" />
                 <div className="text-2xl mb-2">📊</div>
-                {state.file ? (
-                  <p className="text-gray-800 text-sm font-medium">{state.file.name}</p>
-                ) : (
-                  <p className="text-gray-600 text-sm">点击或拖拽文件到此处</p>
-                )}
+                {state.file ? <p className="text-gray-800 text-sm font-medium">{state.file.name}</p> : <p className="text-gray-600 text-sm">点击或拖拽文件到此处</p>}
               </div>
             </div>
 
             {/* 模板选择 */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-3 block">
-                选择模板
-              </label>
+              <label className="text-sm font-medium text-gray-700 mb-3 block">选择模板</label>
               <div className="space-y-2">
                 {TEMPLATES.map(t => (
-                  <div
-                    key={t.id}
-                    onClick={() => handleTemplateSelect(t.id)}
-                    className={`
-                      p-4 rounded-lg border cursor-pointer transition-colors duration-150
-                      ${state.selectedTemplate === t.id
-                        ? 'border-gray-800 bg-gray-50'
-                        : 'border-gray-100 hover:border-gray-200'}
-                    `}
-                  >
+                  <div key={t.id} onClick={() => handleTemplateSelect(t.id)} className={`p-4 rounded-lg border cursor-pointer transition-colors ${state.selectedTemplate === t.id ? 'border-gray-800 bg-gray-50' : 'border-gray-100 hover:border-gray-200'}`}>
                     <div className="flex items-center gap-3">
-                      <div className={`
-                        w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0
-                        ${state.selectedTemplate === t.id ? 'border-gray-800' : 'border-gray-300'}
-                      `}>
-                        {state.selectedTemplate === t.id && (
-                          <div className="w-2 h-2 rounded-full bg-gray-800" />
-                        )}
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${state.selectedTemplate === t.id ? 'border-gray-800' : 'border-gray-300'}`}>
+                        {state.selectedTemplate === t.id && <div className="w-2 h-2 rounded-full bg-gray-800" />}
                       </div>
                       <div>
                         <p className="text-gray-800 text-sm font-medium">{t.name}</p>
@@ -312,22 +371,13 @@ export default function ReportGenerator() {
             </div>
 
             {/* 错误提示 */}
-            {state.error && (
-              <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                <p className="text-red-600 text-sm">{state.error}</p>
-              </div>
-            )}
+            {state.error && <div className="p-3 bg-red-50 border border-red-100 rounded-lg"><p className="text-red-600 text-sm">{state.error}</p></div>}
 
             {/* 生成按钮 */}
             <button
               onClick={generateReport}
               disabled={!state.file || state.loading}
-              className={`
-                w-full py-3 rounded-lg font-medium text-sm transition-colors duration-150
-                ${!state.file || state.loading
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-800 text-white hover:bg-gray-700'}
-              `}
+              className={`w-full py-3 rounded-lg font-medium text-sm transition-colors ${!state.file || state.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
             >
               {state.loading ? '生成中...' : '生成报告'}
             </button>
@@ -337,30 +387,16 @@ export default function ReportGenerator() {
         {/* 报告预览区 */}
         {state.fullHtml && (
           <div ref={resultRef} className="space-y-4">
-            {/* 工具栏 */}
             <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={downloadReport}
-                className="px-4 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
+              <button onClick={downloadReport} disabled={state.loading} className="px-4 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 下载报告
               </button>
-              <button
-                onClick={reset}
-                className="px-4 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
+              <button onClick={reset} className="px-4 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 新建报告
               </button>
             </div>
-
-            {/* 报告 iframe 预览 */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <iframe
-                srcDoc={state.fullHtml || ''}
-                title="报告预览"
-                className="w-full"
-                style={{ height: '600px', border: 'none' }}
-              />
+              <iframe srcDoc={state.fullHtml || ''} title="报告预览" className="w-full" style={{ height: '600px', border: 'none' }} />
             </div>
           </div>
         )}
@@ -369,7 +405,6 @@ export default function ReportGenerator() {
     </div>
   );
 }
-
 // ============ 辅助函数 ============
 
 /**
