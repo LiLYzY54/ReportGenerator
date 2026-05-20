@@ -8,7 +8,7 @@
  * 4. 统一视觉风格
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { parseExcel } from '../lib/parser';
 import { compute } from '../lib/compute';
 import { generateSummary } from '../lib/ai';
@@ -34,12 +34,6 @@ const TEMPLATES = [
   }
 ];
 
-interface AppSettings {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-}
-
 interface AppState {
   file: File | null;
   selectedTemplate: string;
@@ -49,8 +43,6 @@ interface AppState {
   reportData: any | null;
   error: string | null;
   currentStep: 1 | 2 | 3;
-  showSettings: boolean;
-  settings: AppSettings;
 }
 
 export default function ReportGenerator() {
@@ -62,31 +54,8 @@ export default function ReportGenerator() {
     fullHtml: null,
     reportData: null,
     error: null,
-    currentStep: 1,
-    showSettings: false,
-    settings: {
-      apiKey: '',
-      baseUrl: 'https://api.deepseek.com',
-      model: 'deepseek-chat'
-    }
+    currentStep: 1
   });
-
-  // 从本地加载设置
-  useEffect(() => {
-    const saved = localStorage.getItem('report_generator_settings');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setState(s => ({ ...s, settings: { ...s.settings, ...parsed } }));
-      } catch (e) {}
-    }
-  }, []);
-
-  // 保存设置
-  const saveSettings = (newSettings: AppSettings) => {
-    localStorage.setItem('report_generator_settings', JSON.stringify(newSettings));
-    setState(s => ({ ...s, settings: newSettings, showSettings: false }));
-  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -150,15 +119,11 @@ export default function ReportGenerator() {
       // 3. 计算统计（基于过滤后的数据）
       const computed = compute(filteredRecords, {});
 
-      // 4. 生成 AI 摘要 (优先使用自定义设置)
+      // 4. 生成 AI 摘要 (全自动使用环境变量中配置的 Key)
       const aiSummary = await generateSummary({
         student: parsed.metadata.student,
         summary_stats: computed.summary_stats,
         records: filteredRecords
-      }, { 
-        apiKey: state.settings.apiKey || import.meta.env.VITE_OPENAI_API_KEY,
-        baseUrl: state.settings.baseUrl,
-        model: state.settings.model
       });
 
       // 5. 构造 finalData
@@ -199,7 +164,7 @@ export default function ReportGenerator() {
         loading: false
       }));
     }
-  }, [state.file, state.selectedTemplate, state.settings]);
+  }, [state.file, state.selectedTemplate]);
 
   // 下载报告 DOCX (纯前端生成)
   const downloadReport = async () => {
@@ -263,73 +228,10 @@ export default function ReportGenerator() {
       <div className="max-w-[800px] mx-auto px-4 py-12">
 
         {/* 标题区 */}
-        <header className="flex items-center justify-between mb-8">
-          <div className="w-10"></div> {/* 占位平衡按钮 */}
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold text-gray-800">报告生成工具</h1>
-            <p className="text-gray-500 text-sm mt-1">自动生成深度学情分析报告</p>
-          </div>
-          <button 
-            onClick={() => setState(s => ({ ...s, showSettings: true }))}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
-            title="配置 AI"
-          >
-            ⚙️
-          </button>
+        <header className="text-center mb-8">
+          <h1 className="text-2xl font-semibold text-gray-800">报告生成工具</h1>
+          <p className="text-gray-500 text-sm mt-1">自动生成深度学情分析报告</p>
         </header>
-
-        {/* 设置弹窗 */}
-        {state.showSettings && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-              <h2 className="text-lg font-semibold mb-4">AI 诊断配置</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">DeepSeek API Key</label>
-                  <input 
-                    type="password"
-                    placeholder="sk-..."
-                    value={state.settings.apiKey}
-                    onChange={e => setState(s => ({ ...s, settings: { ...s.settings, apiKey: e.target.value } }))}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">API 地址 (Base URL)</label>
-                  <input 
-                    type="text"
-                    value={state.settings.baseUrl}
-                    onChange={e => setState(s => ({ ...s, settings: { ...s.settings, baseUrl: e.target.value } }))}
-                    className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">模型 (Model)</label>
-                  <input 
-                    type="text"
-                    value={state.settings.model}
-                    onChange={e => setState(s => ({ ...s, settings: { ...s.settings, model: e.target.value } }))}
-                    className="w-full px-3 py-2 border rounded-lg text-sm bg-gray-50"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-6">
-                <button 
-                  onClick={() => setState(s => ({ ...s, showSettings: false }))}
-                  className="flex-1 py-2 rounded-lg text-sm font-medium border hover:bg-gray-50"
-                >
-                  取消
-                </button>
-                <button 
-                  onClick={() => saveSettings(state.settings)}
-                  className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-800 text-white hover:bg-gray-700"
-                >
-                  保存并应用
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 步骤引导 */}
         <StepIndicator />
@@ -404,8 +306,7 @@ export default function ReportGenerator() {
       </div>
     </div>
   );
-}
-// ============ 辅助函数 ============
+}// ============ 辅助函数 ============
 
 /**
  * 从嵌入模板中提取内容（去除注释和结尾的 Chart.js）

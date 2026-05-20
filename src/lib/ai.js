@@ -9,18 +9,18 @@
  */
 export async function generateSummary(data, options = {}) {
   const { 
-    apiKey, 
+    apiKey = import.meta.env.VITE_OPENAI_API_KEY, 
     baseUrl = 'https://api.deepseek.com', 
     model = 'deepseek-chat',
-    timeout = 20000 
+    timeout = 25000 
   } = options;
 
   // 1. 构造 Prompt 数据
   const promptData = buildPromptData(data);
   const prompt = buildAnalysisPrompt(promptData);
 
-  if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY') {
-    return generateSummaryFallback(promptData, '未配置 API Key');
+  if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY' || apiKey.length < 5) {
+    return generateSummaryFallback(promptData, '未检测到有效的 API Key 配置');
   }
 
   try {
@@ -38,12 +38,11 @@ export async function generateSummary(data, options = {}) {
         messages: [
           {
             role: 'system',
-            content: '你是一个极其犀利且专业的教研诊断专家。你拒绝任何废话和模板套话（如：基础扎实、继续努力、稳步提升）。你通过分析原始流水日志，点破学生本周学习的真相。'
+            content: '你是一个极其犀利且专业的教研诊断专家。你通过分析原始流水日志，点破学生本周学习的真相。严禁废话。'
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.1,
-        stream: false
+        temperature: 0.1
       }),
       signal: controller.signal
     });
@@ -52,19 +51,17 @@ export async function generateSummary(data, options = {}) {
 
     if (!response.ok) {
       const errJson = await response.json().catch(() => ({}));
-      throw new Error(errJson.error?.message || `API 错误: ${response.status}`);
+      throw new Error(errJson.error?.message || `API 访问受阻 (状态码: ${response.status})`);
     }
 
     const result = await response.json();
     const text = result.choices?.[0]?.message?.content?.trim() || '';
     
     try {
-      // 提取 JSON 部分
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
       return { ...parsed, isAI: true };
     } catch (e) {
-      // 如果不是 JSON，尝试解析整体文本
       return { overall: text, isAI: true };
     }
   } catch (error: any) {
