@@ -14,7 +14,7 @@ import { compute } from '../lib/compute';
 import { generateSummary } from '../lib/ai';
 import { fillTemplate } from '../lib/render';
 import { filterRecordsByRange, getWeekRange, getFullRange, formatDateRange, parseDateToObject } from '../lib/filter';
-import html2pdf from 'html2pdf.js';
+import { exportToDocx } from '../lib/exportDocx';
 
 const TEMPLATE_PATHS: Record<string, string> = {
   'full': '/ReportGenerator/templates/learning_report/report_template_embed.html',
@@ -40,6 +40,7 @@ interface AppState {
   loading: boolean;
   resultHtml: string | null;
   fullHtml: string | null;
+  reportData: any | null;
   error: string | null;
   currentStep: 1 | 2 | 3;
 }
@@ -51,6 +52,7 @@ export default function ReportGenerator() {
     loading: false,
     resultHtml: null,
     fullHtml: null,
+    reportData: null,
     error: null,
     currentStep: 1
   });
@@ -142,7 +144,13 @@ export default function ReportGenerator() {
       // 7. 提取内容部分（去除 html/head/body 包裹）
       const content = extractBodyContent(html);
 
-      setState(s => ({ ...s, resultHtml: content, fullHtml: html, loading: false }));
+      setState(s => ({ 
+        ...s, 
+        resultHtml: content, 
+        fullHtml: html, 
+        reportData: finalData,
+        loading: false 
+      }));
 
       // 8. 滚动到报告区
       setTimeout(() => {
@@ -158,55 +166,29 @@ export default function ReportGenerator() {
     }
   }, [state.file, state.selectedTemplate]);
 
-  // 等待图表渲染完成的信号
-  const waitForChartsReady = (win: Window, timeout = 5000): Promise<void> => {
-    return new Promise((resolve) => {
-      const start = Date.now();
-      const check = () => {
-        if (win.document.getElementById('charts-ready')) {
-          resolve();
-        } else if (Date.now() - start > timeout) {
-          // 超时了也继续，避免无限等待
-          resolve();
-        } else {
-          setTimeout(check, 100);
-        }
-      };
-      check();
-    });
-  };
-
-  // 下载报告 DOCX (调用本地转换 API)
+  // 下载报告 DOCX (纯前端生成)
   const downloadReport = async () => {
-    if (!state.fullHtml) return;
+    if (!state.reportData) return;
     
     setState(s => ({ ...s, loading: true }));
 
     try {
-      const filename = `学习报告_${new Date().toISOString().slice(0, 10)}`;
-      const response = await fetch('/api/convert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          html: state.fullHtml,
-          filename 
-        })
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || '转换失败');
+      // 捕获预览 iframe 中的图表图片
+      const iframe = document.querySelector('iframe');
+      const chartImages: Record<string, string> = {};
+      
+      if (iframe && iframe.contentDocument) {
+        const ids = ['monthChart', 'subjectChart', 'durationChart', 'radarChart'];
+        for (const id of ids) {
+          const canvas = iframe.contentDocument.getElementById(id) as HTMLCanvasElement;
+          if (canvas) {
+            chartImages[id] = canvas.toDataURL('image/png');
+          }
+        }
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${filename}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const filename = `学习报告_${state.reportData.student.name}_${new Date().toISOString().slice(0, 10)}`;
+      await exportToDocx(state.reportData, filename, chartImages);
     } catch (err) {
       alert(`导出失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
@@ -222,6 +204,7 @@ export default function ReportGenerator() {
       loading: false,
       resultHtml: null,
       fullHtml: null,
+      reportData: null,
       error: null,
       currentStep: 1
     });
