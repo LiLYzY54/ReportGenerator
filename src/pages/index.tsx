@@ -98,8 +98,15 @@ export default function ReportGenerator() {
       let dateRange;
 
       if (state.selectedTemplate === 'weekly') {
-        // 周报：使用本周范围
-        dateRange = getWeekRange();
+        // 周报：基于记录中的最新日期计算所在周
+        let maxDate = new Date(0);
+        for (const r of parsed.records) {
+          const d = parseDateToObject(r.date);
+          if (d && d > maxDate) maxDate = d;
+        }
+
+        // 如果没有找到有效日期，才使用当前日期
+        dateRange = getWeekRange(maxDate.getTime() === 0 ? new Date() : maxDate);
         filteredRecords = filterRecordsByRange(parsed.records, dateRange.start, dateRange.end);
       } else {
         // 全局报告：使用全量数据
@@ -169,48 +176,41 @@ export default function ReportGenerator() {
     });
   };
 
-  // 下载报告 PDF
+  // 下载报告 DOCX (调用本地转换 API)
   const downloadReport = async () => {
     if (!state.fullHtml) return;
-
-    const fullDoc = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>学习报告</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; padding: 0; background: #fff; }
-  </style>
-</head>
-<body>
-${state.fullHtml}
-</body>
-</html>`;
-
-    const win = window.open('', '_blank');
-    if (!win) { alert('请允许弹出窗口以下载 PDF'); return; }
-    win.document.write(fullDoc);
-    win.document.close();
-
-    // 等待图表渲染信号（最多5秒）
-    await waitForChartsReady(win);
-    // 再多等 500ms 确保图表完全绘制
-    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setState(s => ({ ...s, loading: true }));
 
     try {
-      const element = win.document.body;
-      const opt = {
-        margin: 0.3,
-        filename: `学习报告_${new Date().toISOString().slice(0, 10)}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-        jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      };
-      await html2pdf().set(opt as any).from(element).save();
+      const filename = `学习报告_${new Date().toISOString().slice(0, 10)}`;
+      const response = await fetch('/api/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          html: state.fullHtml,
+          filename 
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || '转换失败');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      alert(`导出失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
-      win.close();
+      setState(s => ({ ...s, loading: false }));
     }
   };
 
@@ -360,7 +360,7 @@ ${state.fullHtml}
                 onClick={downloadReport}
                 className="px-4 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                下载 PDF
+                下载报告
               </button>
               <button
                 onClick={reset}

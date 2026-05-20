@@ -209,12 +209,6 @@
           <div class="lr-kpi-val">{{kpis.recordedCount}}</div>
           <div class="lr-kpi-label">有记录次数</div>
         </div>
-        <div class="lr-kpi">
-          {{#ifCond kpis.phases '>' 1}}
-          <div class="lr-kpi-val">{{kpis.phases}}</div>
-          <div class="lr-kpi-label">学习阶段</div>
-          {{/ifCond}}
-        </div>
       </div>
     </div>
 
@@ -244,34 +238,6 @@
         <div class="lr-stat-val lr-stat-val-a">{{stats.winterIntensity.value}}</div>
         <div class="lr-stat-sub">{{stats.winterIntensity.desc}}</div>
         {{/if}}
-      </div>
-    </div>
-
-    <div class="lr-profile-row">
-      <div class="lr-profile-card">
-        <div class="lr-profile-icon">{{profiles.personal.icon}}</div>
-        <h4>{{profiles.personal.title}}</h4>
-        <p>{{profiles.personal.description}}</p>
-        <div class="lr-tags">
-          {{#each profiles.personal.tags}}
-          <span class="lr-tag lr-tag-{{this.color}}">{{this.text}}</span>
-          {{/each}}
-        </div>
-      </div>
-      <div class="lr-profile-card">
-        <div class="lr-profile-icon">{{profiles.learning.icon}}</div>
-        <h4>{{profiles.learning.title}}</h4>
-        <p>{{profiles.learning.description}}</p>
-        <div class="lr-tags">
-          {{#each profiles.learning.tags}}
-          <span class="lr-highlight-tag" style="background:{{this.bgColor}};color:{{this.textColor}};">{{this.text}}</span>
-          {{/each}}
-        </div>
-      </div>
-      <div class="lr-profile-card">
-        <div class="lr-profile-icon">📈</div>
-        <h4>综合评价</h4>
-        <p>{{ai.summary}}</p>
       </div>
     </div>
 
@@ -336,19 +302,17 @@
     <div class="lr-table-wrap">
       <table class="lr-table">
         <colgroup>
-          <col style="width:60px;">
-          <col style="width:50px;">
+          <col style="width:70px;">
+          <col style="width:90px;">
+          <col style="width:120px;">
+          <col style="width:120px;">
+          <col style="width:120px;">
           <col style="width:80px;">
-          <col style="width:110px;">
-          <col style="width:110px;">
-          <col style="width:110px;">
-          <col style="width:70px;">
-          <col style="width:70px;">
+          <col style="width:80px;">
         </colgroup>
         <thead>
           <tr>
             <th>日期</th>
-            <th>阶段</th>
             <th>时间段</th>
             <th>语文</th>
             <th>数学</th>
@@ -361,7 +325,6 @@
           {{#each records.items}}
           <tr>
             <td class="date-cell">{{this.date}}</td>
-            <td><span class="lr-phase-badge lr-phase-{{this.phaseNum}}">{{this.phaseShort}}</span></td>
             <td class="date-cell">{{this.timeRange}}</td>
             <td class="subject-cell">{{#each this.subjects.yu}}<span class="lr-subject-pill lr-s-yu">{{this}}</span>{{/each}}</td>
             <td class="subject-cell">{{#each this.subjects.shu}}<span class="lr-subject-pill lr-s-shu">{{this}}</span>{{/each}}</td>

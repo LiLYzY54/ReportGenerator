@@ -181,6 +181,63 @@ function processBlock(html, data, localData = null) {
       // 如果 items 为空，什么都不加
 
       pos = endPos + 9; // 跳过 {{/each}}
+    } else if (rest.startsWith('{{#ifCond ')) {
+      // 找到 ifCond 块
+      const pathEnd = html.indexOf('}}', nextBrace);
+      if (pathEnd === -1) {
+        result += html.slice(nextBrace);
+        break;
+      }
+
+      const rawParams = html.slice(nextBrace + 10, pathEnd).trim();
+      const contentStart = pathEnd + 2;
+
+      // 找到配对的 {{/ifCond}}
+      const endPos = findMatchingEnd(html, contentStart, 'ifCond');
+
+      if (endPos === -1) {
+        result += html.slice(nextBrace);
+        break;
+      }
+
+      const content = html.slice(contentStart, endPos);
+
+      // 解析 ifCond 参数 (v1 operator v2)
+      // 处理带引号的字符串和变量名
+      const paramsMatch = rawParams.match(/^([^\s]+)\s+(['"]?[^'"]+['"]?)\s+(.*)$/);
+      let conditionMet = false;
+
+      if (paramsMatch) {
+        let v1 = getValue(paramsMatch[1].trim(), data, localData);
+        const operator = paramsMatch[2].trim().replace(/^['"]|['"]$/g, '');
+        let v2Raw = paramsMatch[3].trim();
+        let v2;
+
+        if (v2Raw.startsWith("'") || v2Raw.startsWith('"')) {
+          v2 = v2Raw.replace(/^['"]|['"]$/g, '');
+        } else if (!isNaN(Number(v2Raw))) {
+          v2 = Number(v2Raw);
+        } else {
+          v2 = getValue(v2Raw, data, localData);
+        }
+
+        switch (operator) {
+          case '==':  conditionMet = (v1 == v2); break;
+          case '===': conditionMet = (v1 === v2); break;
+          case '!=':  conditionMet = (v1 != v2); break;
+          case '!==': conditionMet = (v1 !== v2); break;
+          case '<':   conditionMet = (v1 < v2); break;
+          case '>':   conditionMet = (v1 > v2); break;
+          case '<=':  conditionMet = (v1 <= v2); break;
+          case '>=':  conditionMet = (v1 >= v2); break;
+        }
+      }
+
+      if (conditionMet) {
+        result += processBlock(content, data, localData);
+      }
+
+      pos = endPos + 11; // 跳过 {{/ifCond}}
     } else if (rest.startsWith('{{#if ')) {
       // 找到 if 块
       const pathEnd = html.indexOf('}}', nextBrace);
