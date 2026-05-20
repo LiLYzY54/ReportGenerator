@@ -403,14 +403,19 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
   const records = parsed.records || [];
   const isWeekly = templateType === 'weekly';
 
-  // 周任务统计（周一~周日）- 根据日期计算星期几
-  const weekCounts = [0, 0, 0, 0, 0, 0, 0];
+  // 周任务统计（周一~周日）- 按学科堆叠
+  const weekCountsBySubject: Record<string, number[]> = {
+    '语文': [0,0,0,0,0,0,0], '数学': [0,0,0,0,0,0,0], '英语': [0,0,0,0,0,0,0], '综合': [0,0,0,0,0,0,0]
+  };
   const dayIndexMap = [6, 0, 1, 2, 3, 4, 5]; // 周日=6, 周一=0, ...
   for (const r of records) {
     const dateObj = parseDateToObject(r.date);
     if (dateObj) {
       const dayIndex = dayIndexMap[dateObj.getDay()];
-      weekCounts[dayIndex]++;
+      for (const t of (r.tasks || [])) {
+        const sub = t.subject === '语文' || t.subject === '数学' || t.subject === '英语' ? t.subject : '综合';
+        weekCountsBySubject[sub][dayIndex]++;
+      }
     }
   }
 
@@ -432,15 +437,15 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
   // 格式化日期范围
   const periodStr = dateRange ? formatDateRange(dateRange.start, dateRange.end) : '全周期';
 
-  // 学习时长分布统计
-  const durationBuckets = [0, 0, 0, 0, 0]; // 1小时以内, 1-2小时, 2-3小时, 3-4小时, 4小时以上
+  // 学习时长分布统计（细化区间）
+  const durationBuckets = [0, 0, 0, 0, 0]; // <45m, 45m-1.5h, 1.5h-2h, 2h-3h, >3h
   for (const r of records) {
     const dur = r.duration || 0;
-    if (dur > 0 && dur <= 60) durationBuckets[0]++;
-    else if (dur > 60 && dur <= 120) durationBuckets[1]++;
-    else if (dur > 120 && dur <= 180) durationBuckets[2]++;
-    else if (dur > 180 && dur <= 240) durationBuckets[3]++;
-    else if (dur > 240) durationBuckets[4]++;
+    if (dur > 0 && dur <= 45) durationBuckets[0]++;
+    else if (dur > 45 && dur <= 90) durationBuckets[1]++;
+    else if (dur > 90 && dur <= 120) durationBuckets[2]++;
+    else if (dur > 120 && dur <= 180) durationBuckets[3]++;
+    else if (dur > 180) durationBuckets[4]++;
   }
 
   // 雷达图维度：根据学科完成率动态生成
@@ -454,7 +459,7 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
       name: '任务执行力',
       score: (overallRate / 20).toFixed(1),
       percent: overallRate,
-      colorClass: overallRate >= 80 ? 'g' : overallRate >= 60 ? 'a' : 'n'
+      colorClass: overallRate >= 80 ? 'g' : overallRate >= 60 ? 'a' : overallRate >= 40 ? 'c' : 'n'
     });
   }
 
@@ -465,7 +470,7 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
       name: '数学专项',
       score: (mathRate / 20).toFixed(1),
       percent: mathRate,
-      colorClass: mathRate >= 80 ? 'g' : mathRate >= 60 ? 'a' : 'n'
+      colorClass: mathRate >= 80 ? 'g' : mathRate >= 60 ? 'a' : mathRate >= 40 ? 'c' : 'n'
     });
   }
 
@@ -475,7 +480,7 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
       name: '语文综合',
       score: (chineseRate / 20).toFixed(1),
       percent: chineseRate,
-      colorClass: chineseRate >= 80 ? 'g' : chineseRate >= 60 ? 'a' : 'n'
+      colorClass: chineseRate >= 80 ? 'g' : chineseRate >= 60 ? 'a' : chineseRate >= 40 ? 'c' : 'n'
     });
   }
 
@@ -485,7 +490,7 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
       name: '英语词汇',
       score: (englishRate / 20).toFixed(1),
       percent: englishRate,
-      colorClass: englishRate >= 80 ? 'g' : englishRate >= 60 ? 'a' : 'n'
+      colorClass: englishRate >= 80 ? 'g' : englishRate >= 60 ? 'a' : englishRate >= 40 ? 'c' : 'n'
     });
   }
 
@@ -556,12 +561,15 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
         gray: '#B4B2A9', grayLight: '#E8E6E0'
       },
       monthlyChart: {
-        title: '本周任务分布',
+        title: '本周任务分布（分学科）',
         labels: JSON.stringify(['周一','周二','周三','周四','周五','周六','周日']),
-        datasetLabel: '任务次数',
-        data: JSON.stringify(weekCounts),
-        colors: JSON.stringify(['#C41E3A', '#E8384F', '#C41E3A', '#E8384F', '#C41E3A', '#E8384F', '#C41E3A']),
-        max: Math.ceil(Math.max(...weekCounts, 1) / 5) * 5 + 5
+        datasets: JSON.stringify([
+          { label: '语文', data: weekCountsBySubject['语文'], backgroundColor: '#3B6D11' },
+          { label: '数学', data: weekCountsBySubject['数学'], backgroundColor: '#185FA5' },
+          { label: '英语', data: weekCountsBySubject['英语'], backgroundColor: '#D85A30' },
+          { label: '综合', data: weekCountsBySubject['综合'], backgroundColor: '#993556' }
+        ]),
+        max: Math.ceil(Math.max(...Object.values(weekCountsBySubject).flat(), 1) / 5) * 5 + 5
       },
       subjectChart: {
         title: '学科任务分布',
@@ -572,14 +580,14 @@ function buildFinalData(parsed: any, computed: any, aiSummary: string | object, 
       subjectProgress: {
         title: '三科任务完成率',
         items: [
-          { name: '语文', value: subjectData['语文']?.rate || 0, colorClass: subjectData['语文']?.rate >= 80 ? 'g' : subjectData['语文']?.rate >= 60 ? 'a' : 'n' },
-          { name: '数学', value: subjectData['数学']?.rate || 0, colorClass: subjectData['数学']?.rate >= 80 ? 'g' : subjectData['数学']?.rate >= 60 ? 'a' : 'n' },
-          { name: '英语', value: subjectData['英语']?.rate || 0, colorClass: subjectData['英语']?.rate >= 80 ? 'g' : subjectData['英语']?.rate >= 60 ? 'a' : 'n' }
-        ].filter(item => item.value > 0) // 只显示有数据的学科
+          { name: '语文', value: subjectData['语文']?.rate || 0, colorClass: (subjectData['语文']?.rate || 0) >= 80 ? 'g' : (subjectData['语文']?.rate || 0) >= 60 ? 'a' : (subjectData['语文']?.rate || 0) >= 40 ? 'c' : 'n' },
+          { name: '数学', value: subjectData['数学']?.rate || 0, colorClass: (subjectData['数学']?.rate || 0) >= 80 ? 'g' : (subjectData['数学']?.rate || 0) >= 60 ? 'a' : (subjectData['数学']?.rate || 0) >= 40 ? 'c' : 'n' },
+          { name: '英语', value: subjectData['英语']?.rate || 0, colorClass: (subjectData['英语']?.rate || 0) >= 80 ? 'g' : (subjectData['英语']?.rate || 0) >= 60 ? 'a' : (subjectData['英语']?.rate || 0) >= 40 ? 'c' : 'n' }
+        ].filter(item => item.value > 0)
       },
       durationChart: {
         title: '单次伴学时长分布',
-        labels: JSON.stringify(['1小时以内', '1—2小时', '2—3小时', '3—4小时', '4小时以上']),
+        labels: JSON.stringify(['< 45m', '45m—1.5h', '1.5h—2h', '2h—3h', '> 3h']),
         datasetLabel: '次数',
         data: JSON.stringify(durationBuckets),
         colors: JSON.stringify(['#B4B2A9', '#378ADD', '#185FA5', '#EF9F27', '#D85A30'])

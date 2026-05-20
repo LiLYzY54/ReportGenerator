@@ -105,10 +105,14 @@
 .lr-prog-pct { font-weight: 700; flex-shrink: 0; }
 .lr-prog-pct-g { color: var(--lr-green); }
 .lr-prog-pct-a { color: var(--lr-amber); }
+.lr-prog-pct-c { color: var(--lr-coral); }
+.lr-prog-pct-n { color: var(--lr-gray-500); }
 .lr-track { height: 8px; min-height: 8px; background: var(--lr-gray-100); border-radius: 4px; overflow: hidden; }
 .lr-fill { height: 100%; min-height: 8px; border-radius: 4px; }
 .lr-fill-g { background: var(--lr-green-mid); }
 .lr-fill-a { background: var(--lr-amber-mid); }
+.lr-fill-c { background: var(--lr-coral); }
+.lr-fill-n { background: var(--lr-gray-400); }
 
 /* ── 数据表 ── */
 .lr-table-wrap { overflow-x: auto; margin-bottom: 16px; }
@@ -453,16 +457,22 @@
       type: 'bar',
       data: {
         labels: JSON.parse('{{{charts.monthlyChart.labels}}}'),
-        datasets: [{ label: '{{{charts.monthlyChart.datasetLabel}}}', data: JSON.parse('{{{charts.monthlyChart.data}}}'), backgroundColor: JSON.parse('{{{charts.monthlyChart.colors}}}'), borderRadius: 5 }]
+        datasets: JSON.parse('{{{charts.monthlyChart.datasets}}}')
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         animation: { duration: 800 },
-        plugins: { legend: { display: false } },
+        plugins: { 
+          legend: { 
+            display: true,
+            position: 'top',
+            labels: { boxWidth: 10, font: { size: 10 } }
+          } 
+        },
         scales: {
-          x: { grid: { color: GRAY_L }, ticks: { color: '#888780', font: { size: 11 } } },
-          y: { min: 0, max: {{{charts.monthlyChart.max}}}, grid: { color: GRAY_L }, ticks: { color: '#888780', font: { size: 11 }, stepSize: 5 } }
+          x: { stacked: true, grid: { color: GRAY_L }, ticks: { color: '#888780', font: { size: 11 } } },
+          y: { stacked: true, min: 0, max: {{{charts.monthlyChart.max}}}, grid: { color: GRAY_L }, ticks: { color: '#888780', font: { size: 11 }, stepSize: 5 } }
         }
       }
     });

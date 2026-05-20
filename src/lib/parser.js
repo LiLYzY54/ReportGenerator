@@ -481,11 +481,13 @@ function detectSubject(text) {
   }
 
   if (t.includes('英语') || t.includes('单词') || t.includes('绘本') ||
-      t.includes('课文') || t.includes('Lesson') || t.includes('熟读')) {
+      t.includes('课文') || t.includes('Lesson') || t.includes('熟读') ||
+      t.includes('阅读') && (t.includes('english') || t.includes('绘本'))) {
     return '英语';
   }
 
-  if (t.includes('打卡') || t.includes('手抄报') || t.includes('课外')) {
+  if (t.includes('打卡') || t.includes('手抄报') || t.includes('课外') || 
+      t.includes('空中课堂') || t.includes('课堂') || t.includes('视频')) {
     return '综合';
   }
 
