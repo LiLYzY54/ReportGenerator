@@ -24,7 +24,7 @@ export default defineConfig({
                 
                 fs.writeFileSync(tempHtmlPath, html);
                 
-                const scriptPath = '/Users/lilyzy/DiagnosticReportTool/convert_to_docx.py';
+                const scriptPath = path.join(process.cwd(), 'scripts', 'convert_to_docx.py');
                 
                 // Use --html and --output flags as expected by the script
                 exec(`python3 "${scriptPath}" --html "${tempHtmlPath}" --output "${outputDocxPath}"`, (error, stdout, stderr) => {
