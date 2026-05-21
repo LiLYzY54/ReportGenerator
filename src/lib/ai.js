@@ -64,12 +64,11 @@ export async function generateSummary(data, options = {}) {
     } catch (e) {
       return { overall: text, isAI: true };
     }
-  } catch (error: any) {
+    } catch (error) {
     console.error('[AI] 诊断失败:', error.message);
     return generateSummaryFallback(promptData, error.message);
-  }
-}
-
+    }
+    }
 /**
  * 构建 Prompt 数据：将所有原始细节准备好
  */

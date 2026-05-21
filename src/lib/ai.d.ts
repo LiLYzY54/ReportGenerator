@@ -1,1 +1,1 @@
-export function generateSummary(data: any, options: { apiKey: string }): Promise<string>;
+export function generateSummary(data: any, options?: { apiKey?: string, baseUrl?: string, model?: string }): Promise<any>;
